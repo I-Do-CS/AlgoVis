@@ -1,8 +1,11 @@
 import { useEffect, useRef } from 'react'
 import type { Frame, Snapshot, SortPlayer } from '../sorting/player.ts'
-import { ALGORITHMS } from '../sorting/algorithms.ts'
+import { useI18n } from '../i18n/LanguageProvider.tsx'
+import type { I18n } from '../i18n/catalog.ts'
 
-function draw(canvas: HTMLCanvasElement, frame: Frame, reducedMotion: boolean, reserveBuffer: boolean) {
+function draw(canvas: HTMLCanvasElement, frame: Frame, reducedMotion: boolean, reserveBuffer: boolean, i18n: I18n) {
+  const { t, n, rtl } = i18n
+  const font = (size: number) => `${size}px ${rtl ? 'Vazirmatn, sans-serif' : 'ui-monospace, monospace'}`
   const context = canvas.getContext('2d')
   if (!context) return
   const { width, height } = canvas.getBoundingClientRect()
@@ -12,6 +15,13 @@ function draw(canvas: HTMLCanvasElement, frame: Frame, reducedMotion: boolean, r
   if (canvas.width !== pixelWidth || canvas.height !== pixelHeight) { canvas.width = pixelWidth; canvas.height = pixelHeight }
   context.setTransform(ratio, 0, 0, ratio, 0, 0)
   context.clearRect(0, 0, width, height)
+  context.direction = 'ltr'
+  const caption = (text: string) => {
+    context.direction = rtl ? 'rtl' : 'ltr'
+    context.textAlign = rtl ? 'right' : 'left'
+    context.fillText(text, rtl ? width - 1 : 1, 12)
+    context.direction = 'ltr'
+  }
   const merging = frame.algorithm === 'merge'
   const top = merging || reserveBuffer ? 78 : 32
   const bottom = 26
@@ -26,20 +36,20 @@ function draw(canvas: HTMLCanvasElement, frame: Frame, reducedMotion: boolean, r
     : operation?.type === 'swap' || (operation?.type === 'compare' && operation.source !== 'buffer') ? operation.indices : []
 
   if (reserveBuffer && !merging) {
-    context.font = '10px ui-monospace, monospace'
+    context.font = font(rtl ? 12 : 10)
     context.textAlign = 'left'
     context.fillStyle = '#95a9b5'
-    context.fillText('NO AUXILIARY ARRAY', 1, 12)
+    caption(t('noBuffer'))
     context.strokeStyle = '#2b3c47'
     context.beginPath(); context.moveTo(0, 61); context.lineTo(width, 61); context.stroke()
   }
 
   if (merging) {
-    context.font = '10px ui-monospace, monospace'
+    context.font = font(rtl ? 12 : 10)
     context.textAlign = 'left'
     context.fillStyle = '#95a9b5'
     const buffer = complete ? undefined : operation?.buffer
-    context.fillText(buffer ? 'AUXILIARY BUFFER' : complete ? 'MERGE COMPLETE' : 'AUXILIARY BUFFER · BUILT AS RUNS MERGE', 1, 12)
+    caption(t(buffer ? 'buffer' : complete ? 'mergeComplete' : 'bufferWaiting'))
     if (buffer) {
       const reading = operation?.type === 'compare' && operation.source === 'buffer' ? operation.indices
         : operation?.type === 'write' ? [operation.sourceIndex] : []
@@ -52,9 +62,9 @@ function draw(canvas: HTMLCanvasElement, frame: Frame, reducedMotion: boolean, r
         context.fillStyle = selected ? operation?.type === 'write' ? '#ed9abd' : '#edc07a' : '#5b8796'
         context.fillRect(x, 53 - bufferHeight, barWidth, bufferHeight)
         if (slotWidth >= 24) {
-          context.font = '11px ui-monospace, monospace'
+          context.font = font(11)
           context.textAlign = 'center'
-          context.fillText(String(item.value), x + barWidth / 2, 49 - bufferHeight)
+          context.fillText(n(item.value), x + barWidth / 2, 49 - bufferHeight)
         }
       }
     }
@@ -104,20 +114,21 @@ function draw(canvas: HTMLCanvasElement, frame: Frame, reducedMotion: boolean, r
     context.fillStyle = color
     context.fillRect(x + 1, height - bottom - barHeight + lift, Math.max(0, barWidth - 2), 2)
     if (slotWidth >= 24) {
-      context.font = '12px ui-monospace, monospace'; context.textAlign = 'center'
+      context.font = font(12); context.textAlign = 'center'
       context.fillStyle = highlighted || reference ? color : '#91a5b0'
-      context.fillText(String(item.value), x + barWidth / 2, height - bottom - barHeight - 9 + lift)
+      context.fillText(n(item.value), x + barWidth / 2, height - bottom - barHeight - 9 + lift)
     }
     context.globalAlpha = 1
   }
-  context.font = '11px ui-monospace, monospace'; context.fillStyle = '#6f8491'; context.textAlign = 'left'
-  context.fillText('1', 1, height - 7)
-  context.textAlign = 'right'; context.fillText(String(frame.items.length), width - 1, height - 7)
+  context.font = font(11); context.fillStyle = '#6f8491'; context.textAlign = 'left'
+  context.fillText(n(1), 1, height - 7)
+  context.textAlign = 'right'; context.fillText(n(frame.items.length), width - 1, height - 7)
 }
 
 export function BarCanvas({ player, snapshot, reducedMotion, reserveBuffer }: {
   player: SortPlayer; snapshot: Snapshot; reducedMotion: boolean; reserveBuffer: boolean
 }) {
+  const i18n = useI18n()
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const needsDraw = useRef(true)
   useEffect(() => { needsDraw.current = true }, [snapshot])
@@ -126,15 +137,17 @@ export function BarCanvas({ player, snapshot, reducedMotion, reserveBuffer }: {
     if (!canvas) return
     let frameId: number
     needsDraw.current = true
+    draw(canvas, player.getFrame(), reducedMotion, reserveBuffer, i18n)
+    void document.fonts.ready.then(() => { needsDraw.current = true })
     const resize = new ResizeObserver(() => { needsDraw.current = true })
     resize.observe(canvas)
     const loop = () => {
       const playing = player.getFrame().status === 'playing'
-      if (playing || needsDraw.current) { draw(canvas, player.getFrame(), reducedMotion, reserveBuffer); needsDraw.current = false }
+      if (playing || needsDraw.current) { draw(canvas, player.getFrame(), reducedMotion, reserveBuffer, i18n); needsDraw.current = false }
       frameId = requestAnimationFrame(loop)
     }
     frameId = requestAnimationFrame(loop)
     return () => { cancelAnimationFrame(frameId); resize.disconnect() }
-  }, [player, reducedMotion, reserveBuffer])
-  return <canvas ref={canvasRef} className="bar-canvas" role="img" aria-label={`${ALGORITHMS[snapshot.algorithm].name} array of ${snapshot.values.length} bars. ${Math.round(snapshot.progress * 100)} percent complete. Expand the array values below for the numbers.`} />
+  }, [player, reducedMotion, reserveBuffer, i18n])
+  return <canvas ref={canvasRef} className="bar-canvas" role="img" dir="ltr" aria-label={i18n.t('canvasLabel', { name: i18n.algorithm(snapshot.algorithm).name, count: snapshot.values.length, percent: Math.round(snapshot.progress * 100) })} />
 }

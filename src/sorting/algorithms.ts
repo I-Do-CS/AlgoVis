@@ -6,12 +6,12 @@ function bubbleTrace(input: readonly number[]): Operation[] {
   const operations: Operation[] = []
   for (let end = values.length - 1; end > 0; end--) {
     const range = [0, end] as const
-    operations.push({ type: 'select', index: 0, range, lines: [0, 1], message: `Sweep the first ${end + 1} elements from left to right.` })
+    operations.push({ type: 'select', index: 0, range, lines: [0, 1], message: { key: 'opSweep', values: { count: end + 1 } } })
     let swapped = false
     for (let j = 0; j < end; j++) {
-      operations.push({ type: 'compare', indices: [j, j + 1], range, lines: [2, 3], message: `Compare neighbors at positions ${j + 1} and ${j + 2}.` })
+      operations.push({ type: 'compare', indices: [j, j + 1], range, lines: [2, 3], message: { key: 'opNeighbors', values: { a: j + 1, b: j + 2 } } })
       if (values[j] > values[j + 1]) {
-        operations.push({ type: 'swap', indices: [j, j + 1], range, lines: [4, 5], message: 'Swap this pair so the larger value moves right.' })
+        operations.push({ type: 'swap', indices: [j, j + 1], range, lines: [4, 5], message: { key: 'opBubbleSwap' } })
         ;[values[j], values[j + 1]] = [values[j + 1], values[j]]
         swapped = true
       }
@@ -27,16 +27,16 @@ function selectionTrace(input: readonly number[]): Operation[] {
   for (let start = 0; start < items.length - 1; start++) {
     const range = [start, items.length - 1] as const
     let min = start
-    operations.push({ type: 'select', index: min, minimumId: items[min].id, range, lines: [0, 1], message: `Find the smallest value from position ${start + 1} onward.` })
+    operations.push({ type: 'select', index: min, minimumId: items[min].id, range, lines: [0, 1], message: { key: 'opFindMinimum', values: { position: start + 1 } } })
     for (let j = start + 1; j < items.length; j++) {
-      operations.push({ type: 'compare', indices: [min, j], minimumId: items[min].id, range, lines: [2], message: `Compare ${items[j].value} with the current minimum, ${items[min].value}.` })
+      operations.push({ type: 'compare', indices: [min, j], minimumId: items[min].id, range, lines: [2], message: { key: 'opCompareMinimum', values: { value: items[j].value, minimum: items[min].value } } })
       if (items[j].value < items[min].value) {
         min = j
-        operations.push({ type: 'select', index: min, minimumId: items[min].id, range, lines: [2], message: `${items[min].value} is the new minimum. Keep scanning.` })
+        operations.push({ type: 'select', index: min, minimumId: items[min].id, range, lines: [2], message: { key: 'opNewMinimum', values: { value: items[min].value } } })
       }
     }
     if (min !== start) {
-      operations.push({ type: 'swap', indices: [start, min], minimumId: items[min].id, range, lines: [3], message: `Put the minimum, ${items[min].value}, into position ${start + 1}.` })
+      operations.push({ type: 'swap', indices: [start, min], minimumId: items[min].id, range, lines: [3], message: { key: 'opPlaceMinimum', values: { value: items[min].value, position: start + 1 } } })
       ;[items[start], items[min]] = [items[min], items[start]]
     }
   }
@@ -50,7 +50,7 @@ function mergeTrace(input: readonly number[]): Operation[] {
     if (lo >= hi) return
     const range = [lo, hi] as const
     const mid = Math.floor((lo + hi) / 2)
-    operations.push({ type: 'range', range, lines: [0], message: `Split positions ${lo + 1}–${hi + 1} into two smaller runs.` })
+    operations.push({ type: 'range', range, lines: [0], message: { key: 'opSplit', values: { a: lo + 1, b: hi + 1 } } })
     sort(lo, mid)
     sort(mid + 1, hi)
     // Immutable buffer references are shared by this merge's events, never recopied per event.
@@ -61,13 +61,13 @@ function mergeTrace(input: readonly number[]): Operation[] {
     for (let target = lo; target <= hi; target++) {
       let source: number
       if (left < leftEnd && right < buffer.items.length) {
-        operations.push({ type: 'compare', indices: [lo + left, lo + right], source: 'buffer', buffer, range, lines: [3], message: `Compare buffer values ${buffer.items[left].value} and ${buffer.items[right].value}. Ties go left.` })
+        operations.push({ type: 'compare', indices: [lo + left, lo + right], source: 'buffer', buffer, range, lines: [3], message: { key: 'opBufferCompare', values: { a: buffer.items[left].value, b: buffer.items[right].value } } })
         source = buffer.items[left].value <= buffer.items[right].value ? left++ : right++
       } else {
         source = left < leftEnd ? left++ : right++
       }
       const item = buffer.items[source]
-      operations.push({ type: 'write', index: target, item, sourceIndex: lo + source, buffer, range, lines: [4], message: `Write ${item.value} from the auxiliary buffer to position ${target + 1}.` })
+      operations.push({ type: 'write', index: target, item, sourceIndex: lo + source, buffer, range, lines: [4], message: { key: 'opWrite', values: { value: item.value, position: target + 1 } } })
       items[target] = item
     }
   }
@@ -84,20 +84,20 @@ function quickTrace(input: readonly number[]): Operation[] {
       const pivot = items[high]
       const range = [low, high] as const
       const context = { range, pivotId: pivot.id }
-      operations.push({ type: 'select', index: high, ...context, lines: [0], message: `Choose ${pivot.value} at position ${high + 1} as the pivot.` })
+      operations.push({ type: 'select', index: high, ...context, lines: [0], message: { key: 'opPivot', values: { value: pivot.value, position: high + 1 } } })
       let boundary = low
       for (let scan = low; scan < high; scan++) {
-        operations.push({ type: 'compare', indices: [scan, high], ...context, lines: [1, 2], message: `Compare ${items[scan].value} with pivot ${pivot.value}.` })
+        operations.push({ type: 'compare', indices: [scan, high], ...context, lines: [1, 2], message: { key: 'opPivotCompare', values: { value: items[scan].value, pivot: pivot.value } } })
         if (items[scan].value <= pivot.value) {
           if (boundary !== scan) {
-            operations.push({ type: 'swap', indices: [boundary, scan], ...context, lines: [3], message: `Move ${items[scan].value} into the left partition.` })
+            operations.push({ type: 'swap', indices: [boundary, scan], ...context, lines: [3], message: { key: 'opPartition', values: { value: items[scan].value } } })
             ;[items[boundary], items[scan]] = [items[scan], items[boundary]]
           }
           boundary++
         }
       }
       if (boundary !== high) {
-        operations.push({ type: 'swap', indices: [boundary, high], ...context, lines: [4], message: `Place pivot ${pivot.value} between the two partitions.` })
+        operations.push({ type: 'swap', indices: [boundary, high], ...context, lines: [4], message: { key: 'opPlacePivot', values: { value: pivot.value } } })
         ;[items[boundary], items[high]] = [items[high], items[boundary]]
       }
       if (boundary - low < high - boundary) {

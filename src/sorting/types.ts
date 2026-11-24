@@ -2,9 +2,11 @@ export type AlgorithmId = 'insertion' | 'bubble' | 'selection' | 'merge' | 'quic
 export type Item = { readonly id: number; readonly value: number }
 export type MergeBuffer = { readonly start: number; readonly items: readonly Item[] }
 
+export type NarrationKey = 'opPick' | 'opNeighbors' | 'opInsertSwap' | 'opSweep' | 'opBubbleSwap' | 'opFindMinimum' | 'opCompareMinimum' | 'opNewMinimum' | 'opPlaceMinimum' | 'opSplit' | 'opBufferCompare' | 'opWrite' | 'opPivot' | 'opPivotCompare' | 'opPartition' | 'opPlacePivot'
+
 interface Context {
   lines: readonly number[]
-  message: string
+  message: { key: NarrationKey; values?: Readonly<Record<string, number>> }
   range?: readonly [number, number]
   pivotId?: number
   minimumId?: number

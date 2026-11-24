@@ -50,11 +50,21 @@ The Canvas shows smooth swaps and writes, active ranges, quicksort pivots, selec
 The timeline uses completed operation counts. Scrubbing pauses playback and restores the requested state, counters, highlights, and identities. A shared timeline extends to the longer trace; shorter traces remain at their endpoint. Seeking resets the animation timer, which then measures playback since the most recent seek or reset. Changing view mode or either comparison algorithm restarts both players from their shared original input.
 
 - Space: play or pause
-- Right arrow: finish one operation and pause
-- Left arrow: return to the previous operation boundary and pause
+- Right arrow (English) / Left arrow (Persian): finish one operation and pause
+- Left arrow (English) / Right arrow (Persian): return to the previous operation boundary and pause
 - R: restore the exact starting array
 
 Shortcuts defer to focused form controls. Playback time measures animation time and is not a CPU benchmark. The operation count includes visualized selections and range splits as well as comparisons, swaps, and writes. A swap counts as two main-array writes. Merge sort counts each placement back into the main array as one write; preparing its auxiliary buffer is excluded.
+
+## Languages and direction
+
+The header's EN / فارسی toggle switches between English and Persian, remembers the choice in browser storage, and updates document language, direction, title, and description. Switching language preserves the active input, algorithms, timeline, speed, counters, and playback state. Supported browsers crossfade through a View Transition; other browsers use a brief fade. Reduced-motion preferences disable the effect, and rapid switches cancel earlier transitions.
+
+Persian uses RTL page flow, logical CSS spacing, localized numerals and narration, mirrored playback icons, RTL range controls, and the Vazirmatn font. In Persian, Left advances and Right goes back; native focused controls retain their own keyboard behavior. Comparison panels are labeled first/second in Persian, following the mirrored reading order. Pseudocode, mathematical expressions, visual array order, and inspected value lists retain explicit LTR scopes. The AlgoVis brand and Ali Ghelichkhani credit are directionally isolated.
+
+`src/i18n/catalog.ts` holds typed English/Persian message pairs, number formatting, dataset names, and localized algorithm metadata. Operations record structured narration keys and numeric parameters, allowing a paused or running trace to translate without rebuilding it. `LanguageProvider.tsx` owns locale preferences, document metadata, and transition lifecycle. Add new interface text to the paired catalog rather than hard-coding one language in a component.
+
+Vazirmatn, DM Sans, and Manrope are hosted under `public/fonts` so font delivery does not depend on external requests. Their SIL Open Font License notices are included alongside the assets. Font sources: [Vazirmatn](https://github.com/rastikerdar/vazirmatn) and [Google Fonts](https://github.com/google/fonts).
 
 ## Architecture
 

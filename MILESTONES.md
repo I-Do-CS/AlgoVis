@@ -27,7 +27,7 @@ Verification: all 19 model tests and 12 Firefox browser tests passed. Model test
 
 ## Milestone 3 — Exploration tools
 
-Status: implemented and verified; ready for user review.
+Status: complete; reviewed and approved by the user.
 
 - Timeline scrubbing with replay checkpoints.
 - Side-by-side comparison using the same original dataset.
@@ -40,6 +40,19 @@ Explore uses one active player. Compare uses one clock for both players and adva
 Project corrections: renamed the app and package to AlgoVis (Algorithm Visualizer); moved the application, dependencies, and Git history directly into `/home/idocs/projects/algovis`; credited Ali Ghelichkhani in the visible footer, README, package author, and HTML author metadata. The existing Site identity and access settings are preserved.
 
 Verification: 30 model tests and 18 Firefox browser tests passed. New coverage includes checkpoint boundaries, reverse seeking, interrupted merge writes, shared inputs and step rates, completed-player hold, comparison results, branding/credit, and mobile/desktop comparison layouts. Explore and Compare screenshots were reviewed. The final TypeScript/Vite production build is part of packaging.
+
+## Milestone 4 — English/Persian and RTL
+
+Status: implemented and verified; ready for user review.
+
+- Header language toggle with persistent preference and smooth, cancelable transitions.
+- Persian labels, algorithm metadata, live narration, dataset names, comparison results, tooltips, accessibility labels, and number formatting.
+- Document language/direction updates, logical layout spacing, mirrored controls, and RTL keyboard/range behavior.
+- Explicit LTR scopes for code, math, array coordinates, and inspected values; isolated brand and creator credit.
+- State-preserving switching in Explore and Compare, including paused merge writes and active playback.
+- Locally hosted Vazirmatn, DM Sans, and Manrope, with their font licenses.
+
+Verification: all 33 model/localization tests and 25 Firefox browser tests passed. Browser coverage includes locale persistence, rapid switch requests, reduced-motion and legacy-browser fallbacks, RTL shortcuts, state preservation, comparison results, LTR islands, header alignment, and layouts from 320 to 1440 pixels. Persian desktop/mobile screenshots were reviewed. An observed fallback-animation cancellation issue was fixed, and external English-font requests that intermittently blocked page load were replaced with local assets. The final production build is part of packaging.
 
 ## Allowance workflow
 
