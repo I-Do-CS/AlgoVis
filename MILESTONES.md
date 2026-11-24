@@ -2,7 +2,7 @@
 
 ## Milestone 1 — Playback foundation
 
-Status: implemented and verified; awaiting user review before milestone 2.
+Status: complete; reviewed and approved by the user.
 
 - Insertion sort with smooth Canvas animation and a reproducible default array.
 - Play, pause, step, reset, replay, speed, size, and shuffle.
@@ -14,12 +14,16 @@ Verification: all 8 model tests and all 4 Playwright browser tests passed. Brows
 
 ## Milestone 2 — Algorithms and datasets
 
-Pending review of milestone 1.
+Status: implemented and verified; awaiting user review before milestone 3.
 
 - Extend the operation model for writes and algorithm-specific highlights.
 - Add bubble sort, selection sort, merge sort, and quicksort.
 - Add sorted, reversed, nearly sorted, and duplicate-heavy datasets.
 - Verify each algorithm, common playback behavior, and dataset preservation.
+
+Algorithm changes restore the exact original input. Shuffle preserves the original input's multiset, including during merge writes. Merge comparisons read an explicit auxiliary buffer; its placements into the main array count as one write each. Pivot and minimum highlights follow element identities through swaps. The sidebar presents each algorithm's pseudocode, stability, and best/average/worst time and space complexity.
+
+Verification: all 19 model tests and 12 Firefox browser tests passed. Model tests cover every preset at multiple sizes and seeds, stable duplicate ordering where promised, known operation counts, interrupted merge writes, and common playback behavior. Browser tests cover every algorithm, dataset changes, original-input preservation, keyboard controls, reduced motion, and responsive layouts. Desktop/mobile screenshots were reviewed; the final release build is part of packaging.
 
 ## Milestone 3 — Exploration tools
 

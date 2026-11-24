@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { BarCanvas } from './components/BarCanvas.tsx'
-import { makeDataset } from './sorting/insertion.ts'
+import { ALGORITHMS, ALGORITHM_IDS } from './sorting/algorithms.ts'
+import { DATASETS, makeDataset, shuffleValues, type DatasetId } from './sorting/datasets.ts'
+import type { AlgorithmId } from './sorting/types.ts'
 import { SortPlayer, type Snapshot } from './sorting/player.ts'
 import './App.css'
 
@@ -17,22 +19,18 @@ function Icon({ name }: { name: IconName }) {
   return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>
 }
 const SPEEDS = [6, 12, 24, 48, 96, 192]
-const CODE = ['for i = 1 … n − 1', '  j = i', '  while j > 0 and a[j−1] > a[j]', '    swap(a[j−1], a[j])', '    j = j − 1']
 const STATUS_LABELS = { ready: 'Ready to sort', playing: 'Sorting', paused: 'Paused', complete: 'Sorted' }
 function operationText(snapshot: Snapshot): string {
   if (snapshot.status === 'complete') return 'Every element is in its place. Nicely sorted.'
   if (snapshot.status === 'ready') return 'Press play and watch order emerge.'
-  const op = snapshot.operation
-  if (op?.type === 'select') return `Pick the next element at position ${op.index + 1}.`
-  if (op?.type === 'compare') return `Compare neighbors at positions ${op.indices[0] + 1} and ${op.indices[1] + 1}.`
-  if (op?.type === 'swap') return 'Move the smaller element one position to the left.'
-  return 'Take it one step at a time.'
+  return snapshot.operation?.message ?? 'Take it one step at a time.'
 }
 
 export default function App() {
   const [player] = useState(() => new SortPlayer(makeDataset(50, 2026)))
   const [snapshot, setSnapshot] = useState(() => player.getSnapshot())
   const [size, setSize] = useState(50)
+  const [pattern, setPattern] = useState<DatasetId>('random')
   const [speedIndex, setSpeedIndex] = useState(2)
   const [reducedMotion, setReducedMotion] = useState(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches)
   const refresh = useCallback(() => setSnapshot(player.getSnapshot()), [player])
@@ -60,14 +58,19 @@ export default function App() {
     media.addEventListener('change', update)
     return () => media.removeEventListener('change', update)
   }, [])
-  const newDataset = (nextSize = size) => {
-    player.load(makeDataset(nextSize, crypto.getRandomValues(new Uint32Array(1))[0]))
+  const newDataset = (nextSize: number, nextPattern: DatasetId) => {
+    player.load(makeDataset(nextSize, crypto.getRandomValues(new Uint32Array(1))[0], nextPattern))
     refresh()
   }
+  const shuffle = () => {
+    player.load(shuffleValues(player.getOriginalValues(), crypto.getRandomValues(new Uint32Array(1))[0]))
+    if (pattern !== 'duplicates') setPattern('random')
+    refresh()
+  }
+  const algorithm = ALGORITHMS[snapshot.algorithm]
   const playing = snapshot.status === 'playing'
   const complete = snapshot.status === 'complete'
-  const activeLines = complete ? [] : snapshot.operation?.type === 'select' ? [0, 1]
-    : snapshot.operation?.type === 'compare' ? [2] : snapshot.operation?.type === 'swap' ? [3, 4] : []
+  const activeLines = complete ? [] : snapshot.operation?.lines ?? []
 
   return (
     <div className="app-shell">
@@ -87,12 +90,17 @@ export default function App() {
         <div className="workspace">
           <section className="visualizer" aria-labelledby="visualizer-title">
             <div className="visualizer-header">
-              <div><span className="eyebrow muted">LIVE CANVAS</span><h2 id="visualizer-title">Insertion sort <span className="element-tag">{size} elements</span></h2></div>
+              <div><span className="eyebrow muted">LIVE CANVAS</span><h2 id="visualizer-title">{algorithm.name} <span className="element-tag">{size} elements</span></h2></div>
               <span className={`status status-${snapshot.status}`} role="status" aria-live="polite"><span />{STATUS_LABELS[snapshot.status]}</span>
             </div>
-            <div className="plot"><div className="plot-scale" aria-hidden="true"><span>100</span><span>75</span><span>50</span><span>25</span><span>0</span></div><BarCanvas player={player} snapshot={snapshot} onUpdate={refresh} reducedMotion={reducedMotion} /></div>
+            <div className="setup-controls">
+              <div className="select-field"><label htmlFor="algorithm">Algorithm</label><select id="algorithm" value={snapshot.algorithm} onChange={(event) => { player.setAlgorithm(event.target.value as AlgorithmId); refresh() }}>{ALGORITHM_IDS.map((id) => <option key={id} value={id}>{ALGORITHMS[id].name}</option>)}</select></div>
+              <div className="select-field"><label htmlFor="dataset">Dataset</label><select id="dataset" value={pattern} onChange={(event) => { const value = event.target.value as DatasetId; setPattern(value); newDataset(size, value) }}>{DATASETS.map((dataset) => <option key={dataset.id} value={dataset.id}>{dataset.name}</option>)}</select></div>
+            </div>
+            <p className="setup-hint">Switch algorithms to explore the same starting array.</p>
+            <div className={`plot ${snapshot.algorithm === 'merge' ? 'merge-plot' : ''}`}><div className="plot-scale" aria-hidden="true"><span>100</span><span>75</span><span>50</span><span>25</span><span>0</span></div><BarCanvas player={player} snapshot={snapshot} onUpdate={refresh} reducedMotion={reducedMotion} /></div>
             <div className="plot-caption"><span>ARRAY POSITION</span><span>{complete ? 'ORDER FOUND' : 'EVERY MOVE TELLS A STORY'}</span></div>
-            <div className="legend" aria-label="Bar colors"><span><i className="swatch unsorted" />Unsorted</span><span><i className="swatch comparing" />Comparing</span><span><i className="swatch moving" />Moving</span><span><i className="swatch sorted" />Sorted</span></div>
+            <div className="legend" aria-label="Bar colors"><span><i className="swatch unsorted" />Unsorted</span><span><i className="swatch comparing" />Comparing</span><span><i className="swatch moving" />{snapshot.algorithm === 'merge' ? 'Writing' : 'Moving'}</span>{(snapshot.algorithm === 'quick' || snapshot.algorithm === 'selection') && <span><i className="swatch reference" />{snapshot.algorithm === 'quick' ? 'Pivot' : 'Minimum'}</span>}<span><i className="swatch sorted" />Sorted</span></div>
             <div className="transport">
               <div className="transport-buttons">
                 <button className="button primary" onClick={togglePlay} aria-keyshortcuts="Space"><Icon name={playing ? 'pause' : 'play'} />{playing ? 'Pause' : complete ? 'Replay' : snapshot.status === 'paused' ? 'Resume' : 'Start sorting'}</button>
@@ -102,27 +110,27 @@ export default function App() {
               <div className="speed-control"><label htmlFor="speed">Speed <output htmlFor="speed">{SPEEDS[speedIndex] / 24}×</output></label><input id="speed" type="range" min="0" max="5" step="1" value={speedIndex} aria-valuetext={`${SPEEDS[speedIndex] / 24} times, ${SPEEDS[speedIndex]} operations per second`} onChange={(event) => { const index = Number(event.target.value); setSpeedIndex(index); player.setSpeed(SPEEDS[index]); refresh() }} /></div>
             </div>
             <div className="experiment-controls">
-              <div className="size-control"><label htmlFor="array-size">Array size <output htmlFor="array-size">{size}</output></label><input id="array-size" type="range" min="8" max="96" step="1" value={size} onChange={(event) => { const value = Number(event.target.value); setSize(value); newDataset(value) }} /></div>
-              <button className="button secondary shuffle" onClick={() => newDataset()}><Icon name="shuffle" />Shuffle array</button>
+              <div className="size-control"><label htmlFor="array-size">Array size <output htmlFor="array-size">{size}</output></label><input id="array-size" type="range" min="8" max="96" step="1" value={size} onChange={(event) => { const value = Number(event.target.value); setSize(value); newDataset(value, pattern) }} /></div>
+              <button className="button secondary shuffle" onClick={shuffle}><Icon name="shuffle" />Shuffle array</button>
             </div>
             <div className="progress-track" role="progressbar" aria-label="Sorting progress" aria-valuenow={Math.round(snapshot.progress * 100)} aria-valuemin={0} aria-valuemax={100}><div style={{ width: `${snapshot.progress * 100}%` }} /></div>
           </section>
           <aside className="explainer" id="how-it-works" aria-labelledby="algorithm-heading">
             <div className="eyebrow muted">UNDER THE HOOD</div>
-            <div className="algorithm-title"><h2 id="algorithm-heading">Insertion sort</h2><span className="algorithm-icon" aria-hidden="true">↳</span></div>
-            <p className="algorithm-description">Like sorting a hand of cards. Pick an element, move it left until it fits, and repeat.</p>
-            <div className="algorithm-tags"><span>Comparison sort</span><span>Stable</span><span>In-place</span></div>
+            <div className="algorithm-title"><h2 id="algorithm-heading">{algorithm.name}</h2><span className="algorithm-icon" aria-hidden="true">↳</span></div>
+            <p className="algorithm-description">{algorithm.description}</p>
+            <div className="algorithm-tags">{algorithm.tags.map((tag) => <span key={tag}>{tag}</span>)}</div>
             <div className="code-heading"><span>THE RECIPE</span><span>PSEUDOCODE</span></div>
-            <div className="code-block" aria-label="Insertion sort pseudocode">{CODE.map((line, index) => <div key={line} className={`code-line ${activeLines.includes(index) ? 'code-active' : ''}`}><span aria-hidden="true">{index + 1}</span><code>{line}</code></div>)}</div>
+            <div className="code-block" aria-label={`${algorithm.name} pseudocode`}>{algorithm.code.map((line, index) => <div key={line} className={`code-line ${activeLines.includes(index) ? 'code-active' : ''}`}><span aria-hidden="true">{index + 1}</span><code>{line}</code></div>)}</div>
             <div className={`operation-note ${complete ? 'operation-complete' : ''}`}><span className="operation-symbol" aria-hidden="true">{complete ? <Icon name="check" /> : 'i'}</span><p data-testid="operation-description">{operationText(snapshot)}</p></div>
-            <div className="complexity-grid"><div><span>Best case</span><strong>O(n)</strong></div><div><span>Average case</span><strong>O(n²)</strong></div><div><span>Algorithm space</span><strong>O(1)</strong></div></div>
-            <p className="implementation-note">This version uses adjacent swaps. Each swap counts as two array writes.</p>
+            <div className="complexity-grid"><div><span>Best case</span><strong>{algorithm.best}</strong></div><div><span>Average case</span><strong>{algorithm.average}</strong></div><div><span>Worst case</span><strong>{algorithm.worst}</strong></div><div><span>Algorithm space</span><strong>{algorithm.space}</strong></div></div>
+            <p className="implementation-note">{algorithm.note}</p>
           </aside>
         </div>
         <section className="metrics" aria-label="Live sorting statistics">
           <div className="metric"><span>COMPARISONS</span><strong data-testid="comparisons">{snapshot.comparisons.toLocaleString()}</strong><small>Pairs put to the test</small></div>
           <div className="metric"><span>ARRAY WRITES</span><strong data-testid="writes">{snapshot.writes.toLocaleString()}</strong><small>Values moved into position</small></div>
-          <div className="metric"><span>OPERATIONS</span><strong data-testid="operations">{snapshot.completed.toLocaleString()}<em> / {snapshot.total.toLocaleString()}</em></strong><small>Select, compare, or swap</small></div>
+          <div className="metric"><span>OPERATIONS</span><strong data-testid="operations">{snapshot.completed.toLocaleString()}<em> / {snapshot.total.toLocaleString()}</em></strong><small>Every visualized algorithm step</small></div>
           <div className="metric"><span>PLAYBACK TIME</span><strong>{(snapshot.elapsedMs / 1000).toFixed(1)}<em> s</em></strong><small>Animation time, not a benchmark</small></div>
         </section>
         <details className="array-details"><summary>Inspect array values <span>{size} numbers</span></summary><p data-testid="array-values">{snapshot.values.join(', ')}</p></details>

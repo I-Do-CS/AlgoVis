@@ -1,6 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { insertionTrace, makeDataset } from '../src/sorting/insertion.ts'
+import { insertionTrace } from '../src/sorting/insertion.ts'
+import { makeDataset } from '../src/sorting/datasets.ts'
 import { SortPlayer } from '../src/sorting/player.ts'
 
 test('replaying traces sorts edge cases without mutating input or losing elements', () => {

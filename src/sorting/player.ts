@@ -1,9 +1,10 @@
-import { insertionTrace, type Operation } from './insertion.ts'
+import { ALGORITHMS } from './algorithms.ts'
+import type { AlgorithmId, Item, Operation } from './types.ts'
 
 export type Status = 'ready' | 'playing' | 'paused' | 'complete'
-export type Item = { id: number; value: number }
 
 export interface Snapshot {
+  algorithm: AlgorithmId
   status: Status
   comparisons: number
   writes: number
@@ -16,10 +17,12 @@ export interface Snapshot {
 }
 
 export interface Frame {
+  algorithm: AlgorithmId
   items: readonly Item[]
   status: Status
   operation: Operation | null
   transition: { indices: readonly [number, number]; progress: number } | null
+  writeTransition: { index: number; from: Item; to: Item; progress: number } | null
 }
 
 /** Pure playback model. A browser clock supplies elapsed time; no timers live here. */
@@ -35,18 +38,20 @@ export class SortPlayer {
   private status: Status = 'ready'
   private lastOperation: Operation | null = null
   private speed = 24
+  private algorithm: AlgorithmId = 'insertion'
 
-  constructor(values: readonly number[]) {
-    this.load(values)
+  constructor(values: readonly number[], algorithm: AlgorithmId = 'insertion') {
+    this.load(values, algorithm)
   }
 
-  load(values: readonly number[]): void {
+  load(values: readonly number[], algorithm: AlgorithmId = this.algorithm): void {
     if (values.some((value) => !Number.isFinite(value))) {
       throw new Error('Every array value must be a finite number.')
     }
     this.original = [...values]
+    this.algorithm = algorithm
     this.items = values.map((value, id) => ({ value, id }))
-    this.operations = insertionTrace(values)
+    this.operations = ALGORITHMS[algorithm].trace(values)
     this.cursor = 0
     this.phase = 0
     this.comparisons = 0
@@ -58,6 +63,14 @@ export class SortPlayer {
 
   reset(): void {
     this.load(this.original)
+  }
+
+  setAlgorithm(algorithm: AlgorithmId): void {
+    this.load(this.original, algorithm)
+  }
+
+  getOriginalValues(): number[] {
+    return [...this.original]
   }
 
   play(): void {
@@ -109,23 +122,32 @@ export class SortPlayer {
       ;[this.items[a], this.items[b]] = [this.items[b], this.items[a]]
       this.writes += 2
     }
+    if (operation.type === 'write') {
+      this.items[operation.index] = operation.item
+      this.writes++
+    }
   }
 
   getFrame(): Frame {
     const pending = this.operations[this.cursor]
     const animating = this.phase > 0 || this.status === 'playing'
     return {
+      algorithm: this.algorithm,
       items: this.items,
       status: this.status,
       operation: animating ? pending ?? this.lastOperation : this.lastOperation,
       transition: pending?.type === 'swap' && this.phase > 0
         ? { indices: pending.indices, progress: this.phase }
         : null,
+      writeTransition: pending?.type === 'write' && this.phase > 0
+        ? { index: pending.index, from: this.items[pending.index], to: pending.item, progress: this.phase }
+        : null,
     }
   }
 
   getSnapshot(): Snapshot {
     return {
+      algorithm: this.algorithm,
       status: this.status,
       comparisons: this.comparisons,
       writes: this.writes,

@@ -11,23 +11,61 @@ function draw(canvas: HTMLCanvasElement, frame: Frame, reducedMotion: boolean) {
   if (canvas.width !== pixelWidth || canvas.height !== pixelHeight) { canvas.width = pixelWidth; canvas.height = pixelHeight }
   context.setTransform(ratio, 0, 0, ratio, 0, 0)
   context.clearRect(0, 0, width, height)
-  const top = 32
+  const merging = frame.algorithm === 'merge'
+  const top = merging ? 78 : 32
   const bottom = 26
   const plotHeight = height - top - bottom
   const slotWidth = width / Math.max(frame.items.length, 1)
   const gap = Math.max(2, Math.min(5, slotWidth * 0.23))
   const barWidth = Math.max(1, slotWidth - gap)
-  context.strokeStyle = '#223039'
+  const operation = frame.operation
+  const complete = frame.status === 'complete'
+  const range = complete ? undefined : operation?.range
+  const active = operation?.type === 'select' || operation?.type === 'write' ? [operation.index]
+    : operation?.type === 'swap' || (operation?.type === 'compare' && operation.source !== 'buffer') ? operation.indices : []
+
+  if (merging) {
+    context.font = '10px ui-monospace, monospace'
+    context.textAlign = 'left'
+    context.fillStyle = '#95a9b5'
+    const buffer = complete ? undefined : operation?.buffer
+    context.fillText(buffer ? 'AUXILIARY BUFFER' : complete ? 'MERGE COMPLETE' : 'AUXILIARY BUFFER · BUILT AS RUNS MERGE', 1, 12)
+    if (buffer) {
+      const reading = operation?.type === 'compare' && operation.source === 'buffer' ? operation.indices
+        : operation?.type === 'write' ? [operation.sourceIndex] : []
+      for (let i = 0; i < buffer.items.length; i++) {
+        const index = buffer.start + i
+        const item = buffer.items[i]
+        const selected = reading.includes(index)
+        const bufferHeight = Math.max(3, (item.value / 100) * 23)
+        const x = index * slotWidth + gap / 2
+        context.fillStyle = selected ? operation?.type === 'write' ? '#ed9abd' : '#edc07a' : '#5b8796'
+        context.fillRect(x, 53 - bufferHeight, barWidth, bufferHeight)
+        if (slotWidth >= 24) {
+          context.font = '11px ui-monospace, monospace'
+          context.textAlign = 'center'
+          context.fillText(String(item.value), x + barWidth / 2, 49 - bufferHeight)
+        }
+      }
+    }
+    context.strokeStyle = '#2b3c47'
+    context.beginPath(); context.moveTo(0, 61); context.lineTo(width, 61); context.stroke()
+  }
+
+  if (range) {
+    context.fillStyle = '#1b2a32'
+    context.fillRect(range[0] * slotWidth, top, (range[1] - range[0] + 1) * slotWidth, plotHeight)
+  }
+  context.strokeStyle = '#263640'
   context.lineWidth = 1
   for (let i = 0; i <= 4; i++) {
     const y = top + (plotHeight * i) / 4 + 0.5
     context.beginPath(); context.moveTo(0, y); context.lineTo(width, y); context.stroke()
   }
-  const operation = frame.operation
-  const active = operation?.type === 'select' ? [operation.index] : operation?.indices ?? []
   const transition = reducedMotion ? null : frame.transition
-  const easing = transition ? (1 - Math.cos(transition.progress * Math.PI)) / 2 : 0
-  // Values and their stable identities travel together, including equal values.
+  const write = reducedMotion ? null : frame.writeTransition
+  const ease = (progress: number) => (1 - Math.cos(progress * Math.PI)) / 2
+  const easing = transition ? ease(transition.progress) : 0
   for (let index = 0; index < frame.items.length; index++) {
     const item = frame.items[index]
     let x = index * slotWidth + gap / 2
@@ -39,12 +77,16 @@ function draw(canvas: HTMLCanvasElement, frame: Frame, reducedMotion: boolean) {
         lift = Math.sin(transition.progress * Math.PI) * (index === a ? -9 : 9)
       }
     }
-    const barHeight = (item.value / 100) * plotHeight
-    const highlighted = active.includes(index) && frame.status !== 'complete'
-    const color = frame.status === 'complete' ? '#63d9b1' : highlighted ? operation?.type === 'swap' ? '#ed9abd' : '#edc07a' : '#69cbd4'
+    const value = write?.index === index ? write.from.value + (write.to.value - write.from.value) * ease(write.progress) : item.value
+    const barHeight = (value / 100) * plotHeight
+    const highlighted = active.includes(index) && !complete
+    const reference = operation?.pivotId === item.id || operation?.minimumId === item.id
+    const moving = operation?.type === 'swap' || operation?.type === 'write'
+    const color = complete ? '#63d9b1' : reference ? '#b7a1ed' : highlighted ? moving ? '#ed9abd' : '#edc07a' : '#69cbd4'
+    context.globalAlpha = range && (index < range[0] || index > range[1]) ? 0.38 : 1
     const gradient = context.createLinearGradient(0, height - bottom - barHeight, 0, height - bottom)
     gradient.addColorStop(0, color)
-    gradient.addColorStop(1, frame.status === 'complete' ? '#307c6b' : highlighted ? '#655b57' : '#2b6877')
+    gradient.addColorStop(1, complete ? '#307c6b' : reference ? '#63517e' : highlighted ? '#655b57' : '#2b6877')
     context.fillStyle = gradient
     context.beginPath()
     context.roundRect(x, height - bottom - barHeight + lift, barWidth, barHeight, [3, 3, 0, 0])
@@ -53,9 +95,10 @@ function draw(canvas: HTMLCanvasElement, frame: Frame, reducedMotion: boolean) {
     context.fillRect(x + 1, height - bottom - barHeight + lift, Math.max(0, barWidth - 2), 2)
     if (slotWidth >= 24) {
       context.font = '12px ui-monospace, monospace'; context.textAlign = 'center'
-      context.fillStyle = highlighted ? '#f0d3a9' : '#91a5b0'
+      context.fillStyle = highlighted || reference ? color : '#91a5b0'
       context.fillText(String(item.value), x + barWidth / 2, height - bottom - barHeight - 9 + lift)
     }
+    context.globalAlpha = 1
   }
   context.font = '11px ui-monospace, monospace'; context.fillStyle = '#6f8491'; context.textAlign = 'left'
   context.fillText('1', 1, height - 7)
