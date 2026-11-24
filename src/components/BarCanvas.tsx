@@ -1,7 +1,8 @@
 import { useEffect, useRef } from 'react'
 import type { Frame, Snapshot, SortPlayer } from '../sorting/player.ts'
+import { ALGORITHMS } from '../sorting/algorithms.ts'
 
-function draw(canvas: HTMLCanvasElement, frame: Frame, reducedMotion: boolean) {
+function draw(canvas: HTMLCanvasElement, frame: Frame, reducedMotion: boolean, reserveBuffer: boolean) {
   const context = canvas.getContext('2d')
   if (!context) return
   const { width, height } = canvas.getBoundingClientRect()
@@ -12,7 +13,7 @@ function draw(canvas: HTMLCanvasElement, frame: Frame, reducedMotion: boolean) {
   context.setTransform(ratio, 0, 0, ratio, 0, 0)
   context.clearRect(0, 0, width, height)
   const merging = frame.algorithm === 'merge'
-  const top = merging ? 78 : 32
+  const top = merging || reserveBuffer ? 78 : 32
   const bottom = 26
   const plotHeight = height - top - bottom
   const slotWidth = width / Math.max(frame.items.length, 1)
@@ -23,6 +24,15 @@ function draw(canvas: HTMLCanvasElement, frame: Frame, reducedMotion: boolean) {
   const range = complete ? undefined : operation?.range
   const active = operation?.type === 'select' || operation?.type === 'write' ? [operation.index]
     : operation?.type === 'swap' || (operation?.type === 'compare' && operation.source !== 'buffer') ? operation.indices : []
+
+  if (reserveBuffer && !merging) {
+    context.font = '10px ui-monospace, monospace'
+    context.textAlign = 'left'
+    context.fillStyle = '#95a9b5'
+    context.fillText('NO AUXILIARY ARRAY', 1, 12)
+    context.strokeStyle = '#2b3c47'
+    context.beginPath(); context.moveTo(0, 61); context.lineTo(width, 61); context.stroke()
+  }
 
   if (merging) {
     context.font = '10px ui-monospace, monospace'
@@ -105,8 +115,8 @@ function draw(canvas: HTMLCanvasElement, frame: Frame, reducedMotion: boolean) {
   context.textAlign = 'right'; context.fillText(String(frame.items.length), width - 1, height - 7)
 }
 
-export function BarCanvas({ player, snapshot, onUpdate, reducedMotion }: {
-  player: SortPlayer; snapshot: Snapshot; onUpdate: () => void; reducedMotion: boolean
+export function BarCanvas({ player, snapshot, reducedMotion, reserveBuffer }: {
+  player: SortPlayer; snapshot: Snapshot; reducedMotion: boolean; reserveBuffer: boolean
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const needsDraw = useRef(true)
@@ -115,26 +125,16 @@ export function BarCanvas({ player, snapshot, onUpdate, reducedMotion }: {
     const canvas = canvasRef.current
     if (!canvas) return
     let frameId: number
-    let previousTime: number | null = null
-    let lastUpdate = 0
     needsDraw.current = true
     const resize = new ResizeObserver(() => { needsDraw.current = true })
     resize.observe(canvas)
-    const resetClock = () => { previousTime = null; needsDraw.current = true }
-    document.addEventListener('visibilitychange', resetClock)
-    const loop = (time: number) => {
+    const loop = () => {
       const playing = player.getFrame().status === 'playing'
-      if (playing) {
-        // Returning to a hidden tab must not jump through the experiment.
-        player.advance(previousTime === null ? 0 : Math.min(time - previousTime, 100))
-        if (time - lastUpdate >= 80 || player.getFrame().status === 'complete') { lastUpdate = time; onUpdate() }
-      }
-      if (playing || needsDraw.current) { draw(canvas, player.getFrame(), reducedMotion); needsDraw.current = false }
-      previousTime = time
+      if (playing || needsDraw.current) { draw(canvas, player.getFrame(), reducedMotion, reserveBuffer); needsDraw.current = false }
       frameId = requestAnimationFrame(loop)
     }
     frameId = requestAnimationFrame(loop)
-    return () => { cancelAnimationFrame(frameId); resize.disconnect(); document.removeEventListener('visibilitychange', resetClock) }
-  }, [player, onUpdate, reducedMotion])
-  return <canvas ref={canvasRef} className="bar-canvas" role="img" aria-label={`Array of ${snapshot.values.length} bars. ${Math.round(snapshot.progress * 100)} percent complete. Expand Inspect array values below for the numbers.`} />
+    return () => { cancelAnimationFrame(frameId); resize.disconnect() }
+  }, [player, reducedMotion, reserveBuffer])
+  return <canvas ref={canvasRef} className="bar-canvas" role="img" aria-label={`${ALGORITHMS[snapshot.algorithm].name} array of ${snapshot.values.length} bars. ${Math.round(snapshot.progress * 100)} percent complete. Expand the array values below for the numbers.`} />
 }

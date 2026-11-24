@@ -1,6 +1,6 @@
 export type AlgorithmId = 'insertion' | 'bubble' | 'selection' | 'merge' | 'quick'
-export type Item = { id: number; value: number }
-export type MergeBuffer = { start: number; items: readonly Item[] }
+export type Item = { readonly id: number; readonly value: number }
+export type MergeBuffer = { readonly start: number; readonly items: readonly Item[] }
 
 interface Context {
   lines: readonly number[]

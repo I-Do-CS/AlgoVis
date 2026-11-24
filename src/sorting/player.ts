@@ -9,12 +9,32 @@ export interface Snapshot {
   comparisons: number
   writes: number
   completed: number
+  position: number
   total: number
   progress: number
   elapsedMs: number
   operation: Operation | null
   values: number[]
 }
+
+interface Checkpoint {
+  cursor: number
+  items: readonly Item[]
+  comparisons: number
+  writes: number
+}
+
+const CHECKPOINT_INTERVAL = 64
+
+function applyOperation(items: Item[], operation: Operation): void {
+  if (operation.type === 'swap') {
+    const [a, b] = operation.indices
+    ;[items[a], items[b]] = [items[b], items[a]]
+  }
+  if (operation.type === 'write') items[operation.index] = operation.item
+}
+
+const writeCount = (operation: Operation): number => operation.type === 'swap' ? 2 : operation.type === 'write' ? 1 : 0
 
 export interface Frame {
   algorithm: AlgorithmId
@@ -39,6 +59,7 @@ export class SortPlayer {
   private lastOperation: Operation | null = null
   private speed = 24
   private algorithm: AlgorithmId = 'insertion'
+  private checkpoints: Checkpoint[] = []
 
   constructor(values: readonly number[], algorithm: AlgorithmId = 'insertion') {
     this.load(values, algorithm)
@@ -52,6 +73,7 @@ export class SortPlayer {
     this.algorithm = algorithm
     this.items = values.map((value, id) => ({ value, id }))
     this.operations = ALGORITHMS[algorithm].trace(values)
+    this.buildCheckpoints()
     this.cursor = 0
     this.phase = 0
     this.comparisons = 0
@@ -71,6 +93,42 @@ export class SortPlayer {
 
   getOriginalValues(): number[] {
     return [...this.original]
+  }
+
+  getStatus(): Status { return this.status }
+  getPosition(): number { return this.cursor + this.phase }
+  getTotal(): number { return this.operations.length }
+
+  private buildCheckpoints(): void {
+    const items = [...this.items]
+    let comparisons = 0
+    let writes = 0
+    this.checkpoints = [{ cursor: 0, items: [...items], comparisons, writes }]
+    for (let i = 0; i < this.operations.length; i++) {
+      const operation = this.operations[i]
+      applyOperation(items, operation)
+      if (operation.type === 'compare') comparisons++
+      writes += writeCount(operation)
+      if ((i + 1) % CHECKPOINT_INTERVAL === 0) {
+        this.checkpoints.push({ cursor: i + 1, items: [...items], comparisons, writes })
+      }
+    }
+  }
+
+  /** Restore the closest checkpoint, then replay at most 63 operations. */
+  seek(position: number): void {
+    if (!Number.isFinite(position)) throw new Error('Timeline position must be finite.')
+    const target = Math.max(0, Math.min(Math.round(position), this.operations.length))
+    const checkpoint = this.checkpoints[Math.floor(target / CHECKPOINT_INTERVAL)]
+    this.items = [...checkpoint.items]
+    this.cursor = checkpoint.cursor
+    this.comparisons = checkpoint.comparisons
+    this.writes = checkpoint.writes
+    this.lastOperation = this.operations[this.cursor - 1] ?? null
+    this.phase = 0
+    this.elapsedMs = 0
+    while (this.cursor < target) this.commit()
+    this.status = target === 0 ? 'ready' : target === this.operations.length ? 'complete' : 'paused'
   }
 
   play(): void {
@@ -117,15 +175,8 @@ export class SortPlayer {
     const operation = this.operations[this.cursor++]
     this.lastOperation = operation
     if (operation.type === 'compare') this.comparisons++
-    if (operation.type === 'swap') {
-      const [a, b] = operation.indices
-      ;[this.items[a], this.items[b]] = [this.items[b], this.items[a]]
-      this.writes += 2
-    }
-    if (operation.type === 'write') {
-      this.items[operation.index] = operation.item
-      this.writes++
-    }
+    applyOperation(this.items, operation)
+    this.writes += writeCount(operation)
   }
 
   getFrame(): Frame {
@@ -152,6 +203,7 @@ export class SortPlayer {
       comparisons: this.comparisons,
       writes: this.writes,
       completed: this.cursor,
+      position: this.getPosition(),
       total: this.operations.length,
       progress: this.operations.length
         ? (this.cursor + this.phase) / this.operations.length

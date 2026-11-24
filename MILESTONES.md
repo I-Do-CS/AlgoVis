@@ -14,7 +14,7 @@ Verification: all 8 model tests and all 4 Playwright browser tests passed. Brows
 
 ## Milestone 2 — Algorithms and datasets
 
-Status: implemented and verified; awaiting user review before milestone 3.
+Status: complete; reviewed and approved by the user.
 
 - Extend the operation model for writes and algorithm-specific highlights.
 - Add bubble sort, selection sort, merge sort, and quicksort.
@@ -27,11 +27,19 @@ Verification: all 19 model tests and 12 Firefox browser tests passed. Model test
 
 ## Milestone 3 — Exploration tools
 
-Pending review of milestone 2.
+Status: implemented and verified; ready for user review.
 
 - Timeline scrubbing with replay checkpoints.
 - Side-by-side comparison using the same original dataset.
 - Explain differences using operation counts; separate animation speed from benchmarks.
+
+The timeline restores snapshots from checkpoints every 64 operations and replays at most 63 operations to reach the selected step. Seeking pauses playback, clears partial transitions, restores operation counters and element identities, and resets the animation timer. Previous-step navigation is available through a button and the Left arrow key.
+
+Explore uses one active player. Compare uses one clock for both players and advances them at the same operations-per-second rate. A finished player holds its final array while its partner continues. Changing an algorithm, input, or mode resets both players to the shared original input. Both views support timeline seeking, stepping, pause/resume, reset, shuffle, and speed changes. Results compare counts after both algorithms finish and distinguish visual steps and animation time from CPU benchmarks.
+
+Project corrections: renamed the app and package to AlgoVis (Algorithm Visualizer); moved the application, dependencies, and Git history directly into `/home/idocs/projects/algovis`; credited Ali Ghelichkhani in the visible footer, README, package author, and HTML author metadata. The existing Site identity and access settings are preserved.
+
+Verification: 30 model tests and 18 Firefox browser tests passed. New coverage includes checkpoint boundaries, reverse seeking, interrupted merge writes, shared inputs and step rates, completed-player hold, comparison results, branding/credit, and mobile/desktop comparison layouts. Explore and Compare screenshots were reviewed. The final TypeScript/Vite production build is part of packaging.
 
 ## Allowance workflow
 

@@ -1,7 +1,7 @@
 {
-  "name": "sort-studio",
+  "name": "algovis",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.3.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -23,5 +23,7 @@
     "tsx": "^4.20.6",
     "typescript": "~7.0.2",
     "vite": "^8.3.6"
-  }
+  },
+  "description": "AlgoVis (Algorithm Visualizer) \u2014 an interactive sorting playground.",
+  "author": "Ali Ghelichkhani"
 }
