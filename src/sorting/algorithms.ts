@@ -1,4 +1,5 @@
 import { insertionTrace } from './insertion.ts'
+import { countingTrace, radixTrace } from './distribution.ts'
 import type { Algorithm, AlgorithmId, Item, MergeBuffer, Operation } from './types.ts'
 
 function bubbleTrace(input: readonly number[]): Operation[] {
@@ -113,7 +114,7 @@ function quickTrace(input: readonly number[]): Operation[] {
   return operations
 }
 
-export const ALGORITHM_IDS: readonly AlgorithmId[] = ['insertion', 'bubble', 'selection', 'merge', 'quick']
+export const ALGORITHM_IDS: readonly AlgorithmId[] = ['insertion', 'bubble', 'selection', 'merge', 'quick', 'counting', 'radix']
 export const ALGORITHMS: Record<AlgorithmId, Algorithm> = {
   insertion: {
     id: 'insertion', name: 'Insertion sort', description: 'Like sorting a hand of cards. Pick an element, move it left until it fits, and repeat.',
@@ -144,5 +145,17 @@ export const ALGORITHMS: Record<AlgorithmId, Algorithm> = {
     tags: ['Partitioning', 'Unstable', 'In-place'], best: 'O(n log n)', average: 'O(n log n)', worst: 'O(n²)', space: 'O(log n)',
     code: ['choose the last element as pivot', 'scan the current range', '  if value ≤ pivot', '    swap into the left partition', 'place pivot between partitions', 'repeat for both partitions'],
     note: 'Purple follows the pivot. A last-element pivot makes sorted and all-equal inputs worst cases.', trace: quickTrace,
+  },
+  counting: {
+    id: 'counting', name: 'Counting sort', description: 'Count each integer value, turn the counts into output positions, then place the elements in order without comparing pairs.',
+    tags: ['Distribution sort', 'Stable', 'Auxiliary buffer'], best: 'O(n + k)', average: 'O(n + k)', worst: 'O(n + k)', space: 'O(n + k)',
+    code: ['find minimum and value range k', 'count each value in its bucket', 'accumulate bucket counts', 'place items right to left in output', 'copy output back to the array'],
+    note: 'k is the integer value range. Supports signed integers with k ≤ 1024. Only main-array placements count as writes; bucket updates and buffer placements are visual steps.', trace: countingTrace,
+  },
+  radix: {
+    id: 'radix', name: 'Radix sort', description: 'Sort integers one decimal digit at a time, starting with the units. Stable counting passes preserve the work of earlier digits.',
+    tags: ['Distribution sort', 'Stable', 'Digit passes'], best: 'O(d(n + b))', average: 'O(d(n + b))', worst: 'O(d(n + b))', space: 'O(n + b)',
+    code: ['for each digit, from units upward', 'count items in digit buckets 0 … 9', 'accumulate bucket counts', 'place items right to left in output', 'copy output back to the array', 'continue to the next digit'],
+    note: 'd is the number of digits and b = 10. Negative integers use a shared offset. Each pass is stable; only writes to the main array count as writes.', trace: radixTrace,
   },
 }

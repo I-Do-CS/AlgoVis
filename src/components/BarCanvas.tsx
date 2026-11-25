@@ -22,7 +22,8 @@ function draw(canvas: HTMLCanvasElement, frame: Frame, reducedMotion: boolean, r
     context.fillText(text, rtl ? width - 1 : 1, 12)
     context.direction = 'ltr'
   }
-  const merging = frame.algorithm === 'merge'
+  const distribution = frame.algorithm === 'counting' || frame.algorithm === 'radix'
+  const merging = frame.algorithm === 'merge' || distribution
   const top = merging || reserveBuffer ? 78 : 32
   const bottom = 26
   const plotHeight = height - top - bottom
@@ -32,7 +33,7 @@ function draw(canvas: HTMLCanvasElement, frame: Frame, reducedMotion: boolean, r
   const operation = frame.operation
   const complete = frame.status === 'complete'
   const range = complete ? undefined : operation?.range
-  const active = operation?.type === 'select' || operation?.type === 'write' ? [operation.index]
+  const active = operation?.type === 'select' || operation?.type === 'write' || operation?.type === 'bucket' ? [operation.index]
     : operation?.type === 'swap' || (operation?.type === 'compare' && operation.source !== 'buffer') ? operation.indices : []
 
   if (reserveBuffer && !merging) {
@@ -49,7 +50,7 @@ function draw(canvas: HTMLCanvasElement, frame: Frame, reducedMotion: boolean, r
     context.textAlign = 'left'
     context.fillStyle = '#95a9b5'
     const buffer = complete ? undefined : operation?.buffer
-    caption(t(buffer ? 'buffer' : complete ? 'mergeComplete' : 'bufferWaiting'))
+    caption(t(buffer ? 'buffer' : complete ? distribution ? 'outputComplete' : 'mergeComplete' : distribution ? 'outputWaiting' : 'bufferWaiting'))
     if (buffer) {
       const reading = operation?.type === 'compare' && operation.source === 'buffer' ? operation.indices
         : operation?.type === 'write' ? [operation.sourceIndex] : []

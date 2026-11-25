@@ -32,8 +32,8 @@ for (const id of ALGORITHM_IDS) {
   })
 }
 
-test('insertion, bubble, and merge preserve the original order of equal values', () => {
-  for (const id of ['insertion', 'bubble', 'merge']) {
+test('stable sorts preserve the original order of equal values', () => {
+  for (const id of ['insertion', 'bubble', 'merge', 'counting', 'radix']) {
     const player = new SortPlayer([3, 1, 2, 1, 3, 2], id)
     player.play()
     player.advance(100_000)

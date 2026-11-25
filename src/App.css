@@ -225,3 +225,14 @@ html[lang='fa'] .comparison-stats strong { font-family: 'Vazirmatn', sans-serif;
 .source-link { display: inline-flex; align-items: center; gap: 8px; color: #b4d9df; font-size: 13px; line-height: 1.7; }
 .source-link svg { width: 17px; height: 17px; fill: currentColor; flex: none; }
 .source-link:hover { color: #e0f7f8; text-decoration: underline; text-underline-offset: 4px; }
+.bucket-panel { min-width: 0; margin: 0 26px 22px; border: 1px solid #35434d; border-radius: 8px; padding: 14px; background: #111b22; }
+.bucket-heading { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; color: #b4c6cf; font-size: 14px; line-height: 1.7; }
+.bucket-heading strong { font-weight: 500; color: #e5c68f; }
+.bucket-panel p { color: #8fa7b5; font-size: 14px; line-height: 1.8; margin-top: 8px; }
+.bucket-strip { display: flex; gap: 6px; overflow-x: auto; padding: 10px 0 6px; scrollbar-width: thin; scrollbar-color: #537785 #17242c; }
+.bucket-cell { flex: 0 0 42px; border: 1px solid #334853; border-radius: 5px; text-align: center; overflow: hidden; }
+.bucket-cell span { display: block; background: #20313c; color: #9db8c6; padding: 4px 2px; font-size: 12px; }
+.bucket-cell strong { display: block; padding: 6px 2px; font-size: 14px; font-weight: 500; color: #c0e2e7; }
+.bucket-cell[data-active='true'] { border-color: #e0be81; }
+.bucket-cell[data-active='true'] strong { background: #3b3426; color: #f1d39e; }
+@media (max-width: 620px) { .bucket-panel { margin-inline: 15px; padding: 12px; } }

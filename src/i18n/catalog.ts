@@ -92,6 +92,15 @@ export const MESSAGES = {
   buffer: ['AUXILIARY BUFFER', 'بافر کمکی'],
   mergeComplete: ['MERGE COMPLETE', 'ادغام کامل شد'],
   bufferWaiting: ['AUXILIARY BUFFER · BUILT AS RUNS MERGE', 'بافر کمکی · هنگام ادغام ساخته می‌شود'],
+  outputWaiting: ['OUTPUT BUFFER · BUILT FROM BUCKET POSITIONS', 'بافر خروجی · با جایگاه‌های سطل‌ها ساخته می‌شود'],
+  outputComplete: ['OUTPUT COMPLETE', 'خروجی کامل شد'],
+  buckets: ['Bucket values', 'مقادیر سطل‌ها'],
+  bucketCount: ['Frequency buckets', 'سطل‌های فراوانی'],
+  bucketPrefix: ['Cumulative counts', 'شمارش تجمعی'],
+  bucketPlace: ['Next output positions · zero-based', 'جایگاه‌های بعدی خروجی · از صفر'],
+  bucketWrite: ['Copy stable output to the array', 'کپی خروجی پایدار در آرایه'],
+  bucketWaiting: ['Step or play to watch counts become positions.', 'یک گام پیش برو یا پخش کن تا تبدیل شمارش‌ها به جایگاه‌ها را ببینی.'],
+  digitPlace: ['Digit place: {digit}', 'ارزش مکانی رقم: {digit}'],
   canvasLabel: ['{name} array of {count} bars. {percent} percent complete. Expand the array values below for the numbers.', 'آرایهٔ {name} با {count} ستون؛ {percent} درصد پیشرفت. برای مشاهدهٔ اعداد، بخش مقادیر آرایه را باز کن.'],
   leftAlgorithm: ['Left algorithm', 'الگوریتم اول'],
   rightAlgorithm: ['Right algorithm', 'الگوریتم دوم'],
@@ -134,6 +143,10 @@ export const MESSAGES = {
   opPivotCompare: ['Compare {value} with pivot {pivot}.', '{value} را با محور {pivot} مقایسه کن.'],
   opPartition: ['Move {value} into the left partition.', 'مقدار {value} را به بخش چپ ببر.'],
   opPlacePivot: ['Place pivot {value} between the two partitions.', 'محور {value} را میان دو بخش قرار بده.'],
+  opCount: ['Count {value} in bucket {bucket}. Its frequency is now {count}.', 'مقدار {value} را در سطل {bucket} بشمار. فراوانی آن اکنون {count} است.'],
+  opPrefix: ['Bucket {bucket}: {count} elements belong at or before this bucket.', 'سطل {bucket}: تعداد {count} عنصر در این سطل یا سطل‌های قبل قرار می‌گیرند.'],
+  opBucketPlace: ['Place {value} at output position {position}, preserving equal-key order.', 'مقدار {value} را با حفظ ترتیب کلیدهای برابر در جایگاه {position} خروجی بگذار.'],
+  opDigitPass: ['Start a stable counting pass for digit place {digit}.', 'یک دور شمارش پایدار برای رقم با ارزش مکانی {digit} شروع کن.'],
 } as const satisfies Record<string, readonly [string, string]>
 
 export type TextKey = keyof typeof MESSAGES
@@ -145,8 +158,10 @@ const FA_ALGORITHMS: Record<AlgorithmId, { name: string; description: string; no
   selection: { name: 'مرتب‌سازی انتخابی', description: 'کوچک‌ترین عنصر باقی‌مانده را پیدا کن و آن را در ابتدای بخش نامرتب بگذار. هر انتخاب، بخش مرتب را بزرگ‌تر می‌کند.', note: 'بنفش، کمینهٔ فعلی را نشان می‌دهد. اگر کمینه از قبل در جای درست باشد، جابه‌جایی انجام نمی‌شود.' },
   merge: { name: 'مرتب‌سازی ادغامی', description: 'آرایه را به بخش‌های کوچک‌تر تقسیم کن و آن‌ها را به‌ترتیب ادغام کن. بافر کمکی، مقادیر لازم برای هر ادغام را نگه می‌دارد.', note: 'طلایی، مقایسه در بافر و صورتی، نوشتن را نشان می‌دهد. فقط نوشتن در آرایهٔ اصلی شمرده می‌شود، نه کپی در بافر.' },
   quick: { name: 'مرتب‌سازی سریع', description: 'یک محور انتخاب کن و مقادیر کوچک‌تر را به چپ آن ببر. محور را در جای درست بگذار و این کار را برای هر بخش تکرار کن.', note: 'بنفش، محور را دنبال می‌کند. با انتخاب عنصر آخر به‌عنوان محور، ورودی مرتب یا کاملاً یکسان بدترین حالت است.' },
+  counting: { name: 'مرتب‌سازی شمارشی', description: 'فراوانی هر عدد صحیح را بشمار، شمارش‌ها را به جایگاه خروجی تبدیل کن و بدون مقایسهٔ جفت‌ها، عناصر را به‌ترتیب بچین.', note: 'دامنهٔ مقادیر صحیح، اندازهٔ سطل‌ها را تعیین می‌کند و حداکثر ۱۰۲۴ است. فقط نوشتن در آرایهٔ اصلی شمرده می‌شود؛ تغییر سطل‌ها و جای‌گذاری در بافر، گام نمایشی هستند.' },
+  radix: { name: 'مرتب‌سازی مبنایی', description: 'از یکان شروع کن و در هر دور، اعداد صحیح را بر اساس یک رقم مرتب کن. شمارش پایدار، ترتیب رقم‌های قبلی را حفظ می‌کند.', note: 'مبنا ۱۰ است و تعداد دورها به تعداد رقم‌ها بستگی دارد. اعداد منفی با یک جابه‌جایی مقداری مشترک پشتیبانی می‌شوند. فقط نوشتن در آرایهٔ اصلی شمرده می‌شود.' },
 }
-const FA_TAGS: Record<string, string> = { 'Comparison sort': 'مرتب‌سازی مقایسه‌ای', Stable: 'پایدار', Unstable: 'ناپایدار', 'In-place': 'درجا', 'Divide and conquer': 'تقسیم و حل', 'Auxiliary buffer': 'بافر کمکی', Partitioning: 'بخش‌بندی' }
+const FA_TAGS: Record<string, string> = { 'Comparison sort': 'مرتب‌سازی مقایسه‌ای', Stable: 'پایدار', Unstable: 'ناپایدار', 'In-place': 'درجا', 'Divide and conquer': 'تقسیم و حل', 'Auxiliary buffer': 'بافر کمکی', Partitioning: 'بخش‌بندی', 'Distribution sort': 'مرتب‌سازی توزیعی', 'Digit passes': 'دورهای رقمی' }
 const FA_DATASETS: Record<DatasetId, string> = { random: 'تصادفی', sorted: 'مرتب', reversed: 'معکوس', 'nearly-sorted': 'تقریباً مرتب', duplicates: 'تکرار زیاد' }
 
 export function createI18n(language: Language) {

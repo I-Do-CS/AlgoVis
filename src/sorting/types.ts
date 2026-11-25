@@ -1,8 +1,15 @@
-export type AlgorithmId = 'insertion' | 'bubble' | 'selection' | 'merge' | 'quick'
+export type AlgorithmId = 'insertion' | 'bubble' | 'selection' | 'merge' | 'quick' | 'counting' | 'radix'
 export type Item = { readonly id: number; readonly value: number }
 export type MergeBuffer = { readonly start: number; readonly items: readonly Item[] }
+export type BucketState = {
+  readonly labels: readonly number[]
+  readonly counts: readonly number[]
+  readonly active: number
+  readonly phase: 'count' | 'prefix' | 'place' | 'write'
+  readonly digit?: number
+}
 
-export type NarrationKey = 'opPick' | 'opNeighbors' | 'opInsertSwap' | 'opSweep' | 'opBubbleSwap' | 'opFindMinimum' | 'opCompareMinimum' | 'opNewMinimum' | 'opPlaceMinimum' | 'opSplit' | 'opBufferCompare' | 'opWrite' | 'opPivot' | 'opPivotCompare' | 'opPartition' | 'opPlacePivot'
+export type NarrationKey = 'opPick' | 'opNeighbors' | 'opInsertSwap' | 'opSweep' | 'opBubbleSwap' | 'opFindMinimum' | 'opCompareMinimum' | 'opNewMinimum' | 'opPlaceMinimum' | 'opSplit' | 'opBufferCompare' | 'opWrite' | 'opPivot' | 'opPivotCompare' | 'opPartition' | 'opPlacePivot' | 'opCount' | 'opPrefix' | 'opBucketPlace' | 'opDigitPass'
 
 interface Context {
   lines: readonly number[]
@@ -11,6 +18,7 @@ interface Context {
   pivotId?: number
   minimumId?: number
   buffer?: MergeBuffer
+  buckets?: BucketState
 }
 
 export type Operation = Context & (
@@ -19,6 +27,7 @@ export type Operation = Context & (
   | { type: 'swap'; indices: readonly [number, number] }
   | { type: 'write'; index: number; item: Item; sourceIndex: number; buffer: MergeBuffer }
   | { type: 'range'; range: readonly [number, number] }
+  | { type: 'bucket'; index?: number; buckets: BucketState }
 )
 
 export interface Algorithm {
