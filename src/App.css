@@ -114,6 +114,8 @@ footer { display: flex; align-items: center; justify-content: space-between; gap
 .timeline-control input[type='range']::-moz-range-track { height: 4px; }
 .transport { flex-wrap: wrap; }
 .creator strong { color: #bfd1db; font-weight: 500; }
+.creator a { text-decoration: underline; text-decoration-color: #607f8d; text-underline-offset: 3px; }
+.creator a:hover { text-decoration-color: currentColor; }
 footer { flex-wrap: wrap; }
 .comparison-workspace { display: grid; gap: 22px; }
 .comparison-setup { display: grid; grid-template-columns: minmax(0, 1fr) 220px; align-items: center; gap: 28px; padding: 24px 26px; background: #131d24; border: 1px solid #2b363e; border-radius: 12px; }

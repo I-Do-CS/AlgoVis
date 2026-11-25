@@ -27,7 +27,7 @@ test('Persian preserves a paused merge, translates narration and numbers, and is
   await expect(page.locator('.code-block')).toHaveCSS('direction', 'ltr')
   await expect(page.locator('.plot')).toHaveCSS('direction', 'ltr')
   await expect(page.locator('#timeline')).toHaveCSS('direction', 'rtl')
-  await expect(page.locator('footer bdi')).toHaveAttribute('dir', 'ltr')
+  await expect(page.locator('footer bdi')).toHaveAttribute('dir', 'rtl')
   const plot = await page.locator('.visualizer').boundingBox()
   const sidebar = await page.locator('.explainer').boundingBox()
   expect(plot!.x).toBeGreaterThan(sidebar!.x)
