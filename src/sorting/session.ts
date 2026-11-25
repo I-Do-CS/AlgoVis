@@ -1,5 +1,5 @@
 import { SortPlayer, type Snapshot, type Status } from './player.ts'
-import type { AlgorithmId } from './types.ts'
+import { isSearchAlgorithm, type AlgorithmFamily, type AlgorithmId } from './types.ts'
 
 export type Side = 'primary' | 'secondary'
 
@@ -12,17 +12,23 @@ export interface SessionSnapshot {
   total: number
   progress: number
   elapsedMs: number
+  family: AlgorithmFamily
+  sortedForSearch: boolean
+  target: number
 }
 
-/** One clock and input for either a single sort or a synchronized comparison. */
+/** Shared playback for sorting and searching, preserving the source dataset. */
 export class PlaybackSession {
   readonly primary: SortPlayer
   readonly secondary: SortPlayer
   private comparing = false
+  private original: number[]
+  private target = 50
 
   constructor(values: readonly number[], primary: AlgorithmId = 'insertion', secondary: AlgorithmId = 'merge') {
-    this.primary = new SortPlayer(values, primary)
-    this.secondary = new SortPlayer(values, secondary)
+    this.original = [...values]
+    this.primary = new SortPlayer(primary === 'binary' ? [...values].sort((a, b) => a - b) : values, primary)
+    this.secondary = new SortPlayer(secondary === 'binary' ? [...values].sort((a, b) => a - b) : values, secondary)
   }
 
   private active(): readonly SortPlayer[] {
@@ -39,22 +45,44 @@ export class PlaybackSession {
 
   getPosition(): number { return Math.max(...this.active().map((player) => player.getPosition())) }
   getTotal(): number { return Math.max(...this.active().map((player) => player.getTotal())) }
-  getOriginalValues(): number[] { return this.primary.getOriginalValues() }
+  getOriginalValues(): number[] { return [...this.original] }
+
+  private sortedForSearch(): boolean {
+    return this.primary.getSnapshot().algorithm === 'binary' || (this.comparing && this.secondary.getSnapshot().algorithm === 'binary')
+  }
+
+  private loadPlayers(primary = this.primary.getSnapshot().algorithm, secondary = this.secondary.getSnapshot().algorithm): void {
+    const sorted = [...this.original].sort((a, b) => a - b)
+    const sharedSorted = this.comparing && (primary === 'binary' || secondary === 'binary')
+    this.primary.load(primary === 'binary' || sharedSorted ? sorted : this.original, primary, this.target)
+    this.secondary.load(secondary === 'binary' || sharedSorted ? sorted : this.original, secondary, this.target)
+  }
 
   load(values: readonly number[]): void {
-    this.primary.load(values)
-    this.secondary.load(values)
+    if (values.some((value) => !Number.isFinite(value))) throw new Error('Every array value must be finite.')
+    this.original = [...values]
+    this.loadPlayers()
   }
 
   setComparing(comparing: boolean): void {
     if (this.comparing === comparing) return
     this.comparing = comparing
-    this.reset()
+    this.loadPlayers()
   }
 
   setAlgorithm(side: Side, algorithm: AlgorithmId): void {
-    this[side].setAlgorithm(algorithm)
-    this.reset()
+    this.loadPlayers(side === 'primary' ? algorithm : this.primary.getSnapshot().algorithm, side === 'secondary' ? algorithm : this.secondary.getSnapshot().algorithm)
+  }
+
+  setFamily(family: AlgorithmFamily): void {
+    this.loadPlayers(family === 'searching' ? 'linear' : 'insertion', family === 'searching' ? 'binary' : 'merge')
+  }
+
+  setTarget(target: number): void {
+    if (!Number.isFinite(target)) throw new Error('Search target must be finite.')
+    if (target === this.target) return
+    this.target = target
+    this.loadPlayers()
   }
 
   reset(): void { this.primary.reset(); this.secondary.reset() }
@@ -85,6 +113,8 @@ export class PlaybackSession {
     const position = this.getPosition()
     return {
       primary, secondary, comparing: this.comparing, status, position, total,
+      family: isSearchAlgorithm(primary.algorithm) ? 'searching' : 'sorting',
+      sortedForSearch: this.sortedForSearch(), target: this.target,
       progress: total ? position / total : status === 'complete' ? 1 : 0,
       elapsedMs: this.comparing ? Math.max(primary.elapsedMs, secondary.elapsedMs) : primary.elapsedMs,
     }

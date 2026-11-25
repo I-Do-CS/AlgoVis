@@ -32,8 +32,9 @@ function draw(canvas: HTMLCanvasElement, frame: Frame, reducedMotion: boolean, r
   const barWidth = Math.max(1, slotWidth - gap)
   const operation = frame.operation
   const complete = frame.status === 'complete'
-  const range = complete ? undefined : operation?.range
-  const active = operation?.type === 'select' || operation?.type === 'write' || operation?.type === 'bucket' ? [operation.index]
+  const searching = frame.target !== null
+  const range = complete && !searching ? undefined : operation?.range
+  const active = operation?.type === 'select' || operation?.type === 'write' || operation?.type === 'bucket' || operation?.type === 'probe' || operation?.type === 'found' ? [operation.index]
     : operation?.type === 'swap' || (operation?.type === 'compare' && operation.source !== 'buffer') ? operation.indices : []
 
   if (reserveBuffer && !merging) {
@@ -103,11 +104,13 @@ function draw(canvas: HTMLCanvasElement, frame: Frame, reducedMotion: boolean, r
     const highlighted = active.includes(index) && !complete
     const reference = operation?.pivotId === item.id || operation?.minimumId === item.id
     const moving = operation?.type === 'swap' || operation?.type === 'write'
-    const color = complete ? '#63d9b1' : reference ? '#b7a1ed' : highlighted ? moving ? '#ed9abd' : '#edc07a' : '#69cbd4'
+    const matched = searching && frame.searchResult?.index === index
+    const finished = complete && !searching
+    const color = matched || finished ? '#63d9b1' : reference ? '#b7a1ed' : highlighted ? moving ? '#ed9abd' : '#edc07a' : '#69cbd4'
     context.globalAlpha = range && (index < range[0] || index > range[1]) ? 0.38 : 1
     const gradient = context.createLinearGradient(0, height - bottom - barHeight, 0, height - bottom)
     gradient.addColorStop(0, color)
-    gradient.addColorStop(1, complete ? '#307c6b' : reference ? '#63517e' : highlighted ? '#655b57' : '#2b6877')
+    gradient.addColorStop(1, matched || finished ? '#307c6b' : reference ? '#63517e' : highlighted ? '#655b57' : '#2b6877')
     context.fillStyle = gradient
     context.beginPath()
     context.roundRect(x, height - bottom - barHeight + lift, barWidth, barHeight, [3, 3, 0, 0])
@@ -120,6 +123,15 @@ function draw(canvas: HTMLCanvasElement, frame: Frame, reducedMotion: boolean, r
       context.fillText(n(item.value), x + barWidth / 2, height - bottom - barHeight - 9 + lift)
     }
     context.globalAlpha = 1
+  }
+  if (frame.target !== null && frame.target >= 0 && frame.target <= 100) {
+    const y = height - bottom - (frame.target / 100) * plotHeight
+    context.strokeStyle = '#b7a1ed'; context.setLineDash([5, 4])
+    context.beginPath(); context.moveTo(0, y); context.lineTo(width, y); context.stroke()
+    context.setLineDash([]); context.font = font(11); context.fillStyle = '#c9b9f2'
+    context.direction = rtl ? 'rtl' : 'ltr'; context.textAlign = rtl ? 'left' : 'right'
+    context.fillText(t('targetMarker', { target: frame.target }), rtl ? 2 : width - 2, Math.max(14, y - 7))
+    context.direction = 'ltr'
   }
   context.font = font(11); context.fillStyle = '#6f8491'; context.textAlign = 'left'
   context.fillText(n(1), 1, height - 7)

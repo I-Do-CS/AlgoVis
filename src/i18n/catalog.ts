@@ -1,6 +1,7 @@
 import { ALGORITHMS } from '../sorting/algorithms.ts'
 import { DATASETS, type DatasetId } from '../sorting/datasets.ts'
-import type { AlgorithmId, Operation } from '../sorting/types.ts'
+import { isSearchAlgorithm, type AlgorithmId, type Operation, type SearchResult } from '../sorting/types.ts'
+import type { Status } from '../sorting/player.ts'
 
 export type Language = 'en' | 'fa'
 
@@ -17,6 +18,40 @@ export const MESSAGES = {
   viewMode: ['View mode', 'حالت نمایش'],
   explore: ['Explore', 'کاوش'],
   compare: ['Compare', 'مقایسه'],
+  family: ['Algorithm family', 'گروه الگوریتم'],
+  sorting: ['Sorting', 'مرتب‌سازی'],
+  searching: ['Searching', 'جست‌وجو'],
+  searchHeading: ['Follow the search', 'مسیر جست‌وجو را دنبال کن'],
+  searchIntro: ['Choose a target. Follow each probe. Watch the possibilities narrow.', 'یک مقدار هدف انتخاب کن. هر بررسی را دنبال کن. محدودشدن گزینه‌ها را ببین.'],
+  target: ['Target value', 'مقدار هدف'],
+  targetHint: ['Changing the target restarts playback. Positions below start at 1.', 'تغییر هدف، پخش را از نو شروع می‌کند. جایگاه‌های نمایش‌داده‌شده از ۱ شروع می‌شوند.'],
+  invalidTarget: ['Enter a finite number to search.', 'برای جست‌وجو یک عدد متناهی وارد کن.'],
+  pickTarget: ['Pick an array value', 'انتخاب یک مقدار از آرایه'],
+  activeTarget: ['Looking for {target}.', 'در جست‌وجوی مقدار {target}.'],
+  binaryInputHint: ['Binary search uses an ascending copy of this dataset. Positions refer to that copy. In Compare, both searches use the same sorted copy; preparation is excluded from search counts.', 'جست‌وجوی دودویی از یک نسخهٔ صعودی این داده‌ها استفاده می‌کند و جایگاه‌ها مربوط به آن نسخه‌اند. در حالت مقایسه، هر دو از همان نسخهٔ مرتب استفاده می‌کنند؛ آماده‌سازی در شمارش جست‌وجو حساب نمی‌شود.'],
+  searchInputHint: ['Linear search follows the dataset order without changing the array.', 'جست‌وجوی خطی، ترتیب داده‌ها را بدون تغییر آرایه دنبال می‌کند.'],
+  searchMetrics: ['Live searching statistics', 'آمار زندهٔ جست‌وجو'],
+  probesHint: ['Values checked against the target', 'مقادیری که با هدف مقایسه شده‌اند'],
+  searchWritesHint: ['Search leaves the array unchanged', 'جست‌وجو، آرایه را تغییر نمی‌دهد'],
+  searchReady: ['Ready to search', 'آمادهٔ جست‌وجو'],
+  searchPlaying: ['Searching', 'در حال جست‌وجو'],
+  searchComplete: ['Search complete', 'جست‌وجو تمام شد'],
+  searchReadyNote: ['Choose a target, then play or step through the search.', 'یک هدف انتخاب کن، سپس جست‌وجو را پخش کن یا گام‌به‌گام پیش برو.'],
+  foundAt: ['Found {target} at position {position}.', 'مقدار {target} در جایگاه {position} پیدا شد.'],
+  notFoundNote: ['{target} is not in this array.', 'مقدار {target} در این آرایه وجود ندارد.'],
+  startSearch: ['Start searching', 'شروع جست‌وجو'],
+  searchProgress: ['Searching progress', 'پیشرفت جست‌وجو'],
+  searchFinished: ['SEARCH FINISHED', 'جست‌وجو تمام شد'],
+  searchMoves: ['FOLLOW THE CANDIDATE RANGE', 'بازهٔ گزینه‌های باقی‌مانده را دنبال کن'],
+  candidates: ['Candidates', 'گزینه‌ها'],
+  probing: ['Probing', 'بررسی'],
+  match: ['Match', 'تطابق'],
+  targetMarker: ['Target: {target}', 'هدف: {target}'],
+  searchResultLabel: ['Search result', 'نتیجهٔ جست‌وجو'],
+  searchDifferentPaths: ['Two ways to find a value.', 'دو روش برای پیدا کردن یک مقدار.'],
+  searchFinishedBoth: ['Both searches have finished. Linear search returns the first match; binary search may return any matching duplicate.', 'هر دو جست‌وجو تمام شده‌اند. جست‌وجوی خطی، اولین تطابق را برمی‌گرداند؛ جست‌وجوی دودویی ممکن است هر کدام از تکرارهای برابر را برگرداند.'],
+  searchCompareHint: ['A finished search holds its result while the other continues. Scrub backward to revisit probes and excluded ranges.', 'وقتی یک جست‌وجو تمام شود، نتیجه‌اش ثابت می‌ماند و دیگری ادامه می‌دهد. در خط زمان به عقب برگرد تا بررسی‌ها و بازه‌های حذف‌شده را ببینی.'],
+  finishBothSearch: ['Finish both searches to compare totals.', 'برای مقایسهٔ مجموع، هر دو جست‌وجو را تا پایان اجرا کن.'],
   language: ['Language', 'زبان'],
   live: ['LIVE CANVAS', 'نمای زنده'],
   elements: ['{count} elements', '{count} عنصر'],
@@ -147,6 +182,12 @@ export const MESSAGES = {
   opPrefix: ['Bucket {bucket}: {count} elements belong at or before this bucket.', 'سطل {bucket}: تعداد {count} عنصر در این سطل یا سطل‌های قبل قرار می‌گیرند.'],
   opBucketPlace: ['Place {value} at output position {position}, preserving equal-key order.', 'مقدار {value} را با حفظ ترتیب کلیدهای برابر در جایگاه {position} خروجی بگذار.'],
   opDigitPass: ['Start a stable counting pass for digit place {digit}.', 'یک دور شمارش پایدار برای رقم با ارزش مکانی {digit} شروع کن.'],
+  opProbe: ['Compare {value} at position {position} with target {target}.', 'مقدار {value} در جایگاه {position} را با هدف {target} مقایسه کن.'],
+  opSearchRange: ['Search positions {a}–{b} in ascending order.', 'جایگاه‌های {a} تا {b} را در ترتیب صعودی جست‌وجو کن.'],
+  opDiscardLeft: ['{value} is below {target}. Discard this position and the left half.', 'مقدار {value} از {target} کوچک‌تر است. این جایگاه و نیمهٔ چپ را حذف کن.'],
+  opDiscardRight: ['{value} is above {target}. Discard this position and the right half.', 'مقدار {value} از {target} بزرگ‌تر است. این جایگاه و نیمهٔ راست را حذف کن.'],
+  opFound: ['Found target {target} at position {position}.', 'هدف {target} در جایگاه {position} پیدا شد.'],
+  opMiss: ['No candidates remain. Target {target} was not found.', 'گزینه‌ای باقی نمانده است. هدف {target} پیدا نشد.'],
 } as const satisfies Record<string, readonly [string, string]>
 
 export type TextKey = keyof typeof MESSAGES
@@ -160,8 +201,10 @@ const FA_ALGORITHMS: Record<AlgorithmId, { name: string; description: string; no
   quick: { name: 'مرتب‌سازی سریع', description: 'یک محور انتخاب کن و مقادیر کوچک‌تر را به چپ آن ببر. محور را در جای درست بگذار و این کار را برای هر بخش تکرار کن.', note: 'بنفش، محور را دنبال می‌کند. با انتخاب عنصر آخر به‌عنوان محور، ورودی مرتب یا کاملاً یکسان بدترین حالت است.' },
   counting: { name: 'مرتب‌سازی شمارشی', description: 'فراوانی هر عدد صحیح را بشمار، شمارش‌ها را به جایگاه خروجی تبدیل کن و بدون مقایسهٔ جفت‌ها، عناصر را به‌ترتیب بچین.', note: 'دامنهٔ مقادیر صحیح، اندازهٔ سطل‌ها را تعیین می‌کند و حداکثر ۱۰۲۴ است. فقط نوشتن در آرایهٔ اصلی شمرده می‌شود؛ تغییر سطل‌ها و جای‌گذاری در بافر، گام نمایشی هستند.' },
   radix: { name: 'مرتب‌سازی مبنایی', description: 'از یکان شروع کن و در هر دور، اعداد صحیح را بر اساس یک رقم مرتب کن. شمارش پایدار، ترتیب رقم‌های قبلی را حفظ می‌کند.', note: 'مبنا ۱۰ است و تعداد دورها به تعداد رقم‌ها بستگی دارد. اعداد منفی با یک جابه‌جایی مقداری مشترک پشتیبانی می‌شوند. فقط نوشتن در آرایهٔ اصلی شمرده می‌شود.' },
+  linear: { name: 'جست‌وجوی خطی', description: 'مقادیر را از چپ به راست، یکی‌یکی بررسی کن. با اولین تطابق متوقف شو یا تا بررسی همهٔ عناصر ادامه بده.', note: 'با هر ترتیب ورودی کار می‌کند و اولین تطابق را برمی‌گرداند. هر مقایسه، بررسی یک مقدار در برابر هدف است. جایگاه‌های نمایشی از ۱ شروع می‌شوند و آرایه تغییر نمی‌کند.' },
+  binary: { name: 'جست‌وجوی دودویی', description: 'میانهٔ آرایهٔ صعودی را بررسی کن. نیمه‌ای را که نمی‌تواند هدف را داشته باشد کنار بگذار و در بازهٔ باقی‌مانده تکرار کن.', note: 'به ورودی صعودی نیاز دارد؛ برنامه پیش از پخش، یک نسخهٔ مرتب با توضیح روشن آماده می‌کند. آماده‌سازی در شمارش جست‌وجو نیست. ممکن است هر تکرار برابر را برگرداند. جایگاه‌های نمایشی از ۱ شروع می‌شوند.' },
 }
-const FA_TAGS: Record<string, string> = { 'Comparison sort': 'مرتب‌سازی مقایسه‌ای', Stable: 'پایدار', Unstable: 'ناپایدار', 'In-place': 'درجا', 'Divide and conquer': 'تقسیم و حل', 'Auxiliary buffer': 'بافر کمکی', Partitioning: 'بخش‌بندی', 'Distribution sort': 'مرتب‌سازی توزیعی', 'Digit passes': 'دورهای رقمی' }
+const FA_TAGS: Record<string, string> = { 'Comparison sort': 'مرتب‌سازی مقایسه‌ای', Stable: 'پایدار', Unstable: 'ناپایدار', 'In-place': 'درجا', 'Divide and conquer': 'تقسیم و حل', 'Auxiliary buffer': 'بافر کمکی', Partitioning: 'بخش‌بندی', 'Distribution sort': 'مرتب‌سازی توزیعی', 'Digit passes': 'دورهای رقمی', 'Sequential search': 'جست‌وجوی ترتیبی', 'Unsorted input': 'ورودی نامرتب', 'Read-only': 'فقط خواندنی', 'Interval search': 'جست‌وجوی بازه‌ای', 'Sorted input': 'ورودی مرتب' }
 const FA_DATASETS: Record<DatasetId, string> = { random: 'تصادفی', sorted: 'مرتب', reversed: 'معکوس', 'nearly-sorted': 'تقریباً مرتب', duplicates: 'تکرار زیاد' }
 
 export function createI18n(language: Language) {
@@ -177,7 +220,9 @@ export function createI18n(language: Language) {
   const dataset = (id: DatasetId) => language === 'fa' ? FA_DATASETS[id] : DATASETS.find((entry) => entry.id === id)!.name
   const operation = (op: Operation | null) => op ? t(op.message.key, op.message.values) : t('stepNote')
   const values = (input: readonly number[]) => input.map((value) => n(value)).join(language === 'fa' ? '، ' : ', ')
-  return { language, rtl: language === 'fa', t, n, algorithm, dataset, operation, values }
+  const status = (value: Status, id: AlgorithmId) => t(isSearchAlgorithm(id) && value !== 'paused' ? value === 'ready' ? 'searchReady' : value === 'playing' ? 'searchPlaying' : 'searchComplete' : value)
+  const searchResult = (result: SearchResult) => result.index === null ? t('notFoundNote', { target: result.target }) : t('foundAt', { target: result.target, position: result.index + 1 })
+  return { language, rtl: language === 'fa', t, n, algorithm, dataset, operation, values, status, searchResult }
 }
 
 export type I18n = ReturnType<typeof createI18n>

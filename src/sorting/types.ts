@@ -1,4 +1,9 @@
-export type AlgorithmId = 'insertion' | 'bubble' | 'selection' | 'merge' | 'quick' | 'counting' | 'radix'
+export type SortAlgorithmId = 'insertion' | 'bubble' | 'selection' | 'merge' | 'quick' | 'counting' | 'radix'
+export type SearchAlgorithmId = 'linear' | 'binary'
+export type AlgorithmId = SortAlgorithmId | SearchAlgorithmId
+export type AlgorithmFamily = 'sorting' | 'searching'
+export const isSearchAlgorithm = (id: AlgorithmId): id is SearchAlgorithmId => id === 'linear' || id === 'binary'
+export type SearchResult = { readonly target: number; readonly index: number | null }
 export type Item = { readonly id: number; readonly value: number }
 export type MergeBuffer = { readonly start: number; readonly items: readonly Item[] }
 export type BucketState = {
@@ -9,7 +14,7 @@ export type BucketState = {
   readonly digit?: number
 }
 
-export type NarrationKey = 'opPick' | 'opNeighbors' | 'opInsertSwap' | 'opSweep' | 'opBubbleSwap' | 'opFindMinimum' | 'opCompareMinimum' | 'opNewMinimum' | 'opPlaceMinimum' | 'opSplit' | 'opBufferCompare' | 'opWrite' | 'opPivot' | 'opPivotCompare' | 'opPartition' | 'opPlacePivot' | 'opCount' | 'opPrefix' | 'opBucketPlace' | 'opDigitPass'
+export type NarrationKey = 'opPick' | 'opNeighbors' | 'opInsertSwap' | 'opSweep' | 'opBubbleSwap' | 'opFindMinimum' | 'opCompareMinimum' | 'opNewMinimum' | 'opPlaceMinimum' | 'opSplit' | 'opBufferCompare' | 'opWrite' | 'opPivot' | 'opPivotCompare' | 'opPartition' | 'opPlacePivot' | 'opCount' | 'opPrefix' | 'opBucketPlace' | 'opDigitPass' | 'opProbe' | 'opSearchRange' | 'opDiscardLeft' | 'opDiscardRight' | 'opFound' | 'opMiss'
 
 interface Context {
   lines: readonly number[]
@@ -28,6 +33,9 @@ export type Operation = Context & (
   | { type: 'write'; index: number; item: Item; sourceIndex: number; buffer: MergeBuffer }
   | { type: 'range'; range: readonly [number, number] }
   | { type: 'bucket'; index?: number; buckets: BucketState }
+  | { type: 'probe'; index: number; target: number }
+  | { type: 'found'; index: number; target: number }
+  | { type: 'miss'; target: number }
 )
 
 export interface Algorithm {
@@ -41,5 +49,5 @@ export interface Algorithm {
   space: string
   code: readonly string[]
   note: string
-  trace: (input: readonly number[]) => Operation[]
+  trace: (input: readonly number[], target?: number) => Operation[]
 }

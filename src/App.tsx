@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
 import { ArrayPlot } from './components/ArrayPlot.tsx'
 import { ComparisonView } from './components/ComparisonView.tsx'
+import { SearchSetup } from './components/SearchSetup.tsx'
 import { PlaybackControls, Icon, SPEEDS } from './components/PlaybackControls.tsx'
 import { usePlaybackClock } from './hooks/usePlaybackClock.ts'
-import { ALGORITHM_IDS } from './sorting/algorithms.ts'
+import { ALGORITHM_IDS, SEARCH_ALGORITHM_IDS } from './sorting/algorithms.ts'
 import { DATASETS, makeDataset, shuffleValues, type DatasetId } from './sorting/datasets.ts'
 import type { AlgorithmId } from './sorting/types.ts'
 import { LanguageToggle, useI18n } from './i18n/LanguageProvider.tsx'
@@ -11,11 +12,14 @@ import { PlaybackSession, type Side } from './sorting/session.ts'
 import './App.css'
 
 export default function App() {
-  const { t, n, rtl, algorithm: translatedAlgorithm, dataset, operation, values } = useI18n()
+  const { t, n, rtl, algorithm: translatedAlgorithm, dataset, operation, values, status: statusText, searchResult } = useI18n()
   const [session] = useState(() => new PlaybackSession(makeDataset(50, 2026)))
   const [state, setState] = useState(() => session.getSnapshot())
   const player = session.primary
   const snapshot = state.primary
+  const searching = state.family === 'searching'
+  const [targetDraft, setTargetDraft] = useState('50')
+  const validTarget = !searching || (targetDraft.trim() !== '' && Number.isFinite(Number(targetDraft)))
   const [size, setSize] = useState(50)
   const [pattern, setPattern] = useState<DatasetId>('random')
   const [speedIndex, setSpeedIndex] = useState(2)
@@ -23,13 +27,14 @@ export default function App() {
   const refresh = useCallback(() => setState(session.getSnapshot()), [session])
   usePlaybackClock(session, refresh)
   const togglePlay = useCallback(() => {
+    if (!validTarget) return
     if (session.getStatus() === 'playing') session.pause()
     else session.play()
     refresh()
-  }, [session, refresh])
+  }, [session, refresh, validTarget])
   const reset = useCallback(() => { session.reset(); refresh() }, [session, refresh])
-  const step = useCallback(() => { session.step(); refresh() }, [session, refresh])
-  const back = useCallback(() => { session.back(); refresh() }, [session, refresh])
+  const step = useCallback(() => { if (validTarget) { session.step(); refresh() } }, [session, refresh, validTarget])
+  const back = useCallback(() => { if (validTarget) { session.back(); refresh() } }, [session, refresh, validTarget])
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.ctrlKey || event.metaKey || event.altKey || event.repeat) return
@@ -62,7 +67,19 @@ export default function App() {
   const activeLines = complete ? [] : snapshot.operation?.lines ?? []
   const changePattern = (value: DatasetId) => { setPattern(value); newDataset(size, value) }
   const changeAlgorithm = (side: Side, id: AlgorithmId) => { session.setAlgorithm(side, id); refresh() }
-  const controls = <PlaybackControls state={state} speedIndex={speedIndex} size={size}
+  const changeTarget = (draft: string) => {
+    setTargetDraft(draft)
+    if (draft.trim() !== '' && Number.isFinite(Number(draft))) session.setTarget(Number(draft))
+    else session.reset()
+    refresh()
+  }
+  const pickTarget = () => {
+    const input = session.getOriginalValues()
+    const target = input[Math.floor(input.length / 2)]
+    setTargetDraft(String(target)); session.setTarget(target); session.reset(); refresh()
+  }
+  const algorithmIds = searching ? SEARCH_ALGORITHM_IDS : ALGORITHM_IDS
+  const controls = <PlaybackControls state={state} speedIndex={speedIndex} size={size} disabled={!validTarget}
     onToggle={togglePlay} onStep={step} onBack={back} onReset={reset}
     onSeek={(position) => { session.seek(position); refresh() }}
     onSpeed={(index) => { setSpeedIndex(index); session.setSpeed(SPEEDS[index]); refresh() }}
@@ -81,21 +98,23 @@ export default function App() {
       </header>
       <main id="main">
         <div className="page-heading">
-          <div><div className="eyebrow"><span className="small-line" /> {t('eyebrow')}</div><h1>{t('heading')}<span>.</span></h1><p>{t('intro')}</p></div>
+          <div><div className="eyebrow"><span className="small-line" /> {t('eyebrow')}</div><h1>{t(searching ? 'searchHeading' : 'heading')}<span>.</span></h1><p>{t(searching ? 'searchIntro' : 'intro')}</p></div>
           <div className="mode-switch" role="group" aria-label={t('viewMode')}><button aria-pressed={!state.comparing} onClick={() => { session.setComparing(false); refresh() }}>{t('explore')}</button><button aria-pressed={state.comparing} onClick={() => { session.setComparing(true); refresh() }}>{t('compare')}</button></div>
         </div>
+        <div className="family-switch mode-switch" role="group" aria-label={t('family')}><button aria-pressed={!searching} onClick={() => { session.setFamily('sorting'); refresh() }}>{t('sorting')}</button><button aria-pressed={searching} onClick={() => { session.setFamily('searching'); refresh() }}>{t('searching')}</button></div>
+        {searching && <SearchSetup draft={targetDraft} valid={validTarget} sorted={state.sortedForSearch} onTarget={changeTarget} onPick={pickTarget} />}
         {state.comparing ? <ComparisonView session={session} state={state} pattern={pattern} reducedMotion={reducedMotion} controls={controls} onPattern={changePattern} onAlgorithm={changeAlgorithm} /> : <>
         <div className="workspace">
           <section className="visualizer" aria-labelledby="visualizer-title">
             <div className="visualizer-header">
               <div><span className="eyebrow muted">{t('live')}</span><h2 id="visualizer-title">{algorithm.name} <span className="element-tag">{t('elements', { count: size })}</span></h2></div>
-              <span className={`status status-${snapshot.status}`} role="status" aria-live="polite"><span />{t(snapshot.status)}</span>
+              <span className={`status status-${snapshot.status}`} role="status" aria-live="polite"><span />{statusText(snapshot.status, snapshot.algorithm)}</span>
             </div>
             <div className="setup-controls">
-              <div className="select-field"><label htmlFor="algorithm">{t('algorithm')}</label><select id="algorithm" value={snapshot.algorithm} onChange={(event) => changeAlgorithm('primary', event.target.value as AlgorithmId)}>{ALGORITHM_IDS.map((id) => <option key={id} value={id}>{translatedAlgorithm(id).name}</option>)}</select></div>
+              <div className="select-field"><label htmlFor="algorithm">{t('algorithm')}</label><select id="algorithm" value={snapshot.algorithm} onChange={(event) => changeAlgorithm('primary', event.target.value as AlgorithmId)}>{algorithmIds.map((id) => <option key={id} value={id}>{translatedAlgorithm(id).name}</option>)}</select></div>
               <div className="select-field"><label htmlFor="dataset">{t('dataset')}</label><select id="dataset" value={pattern} onChange={(event) => changePattern(event.target.value as DatasetId)}>{DATASETS.map((entry) => <option key={entry.id} value={entry.id}>{dataset(entry.id)}</option>)}</select></div>
             </div>
-            <p className="setup-hint">{t('inputHint')}</p>
+            {searching ? <p className={`search-result ${snapshot.searchResult ? 'search-result-complete' : ''}`} role="status" aria-label={t('searchResultLabel')} data-testid="search-result">{!validTarget ? t('invalidTarget') : snapshot.searchResult ? searchResult(snapshot.searchResult) : t('activeTarget', { target: state.target })}</p> : <p className="setup-hint">{t('inputHint')}</p>}
             <ArrayPlot player={player} snapshot={snapshot} reducedMotion={reducedMotion} />
             {controls}
           </section>
@@ -106,14 +125,14 @@ export default function App() {
             <div className="algorithm-tags">{algorithm.tags.map((tag) => <span key={tag}>{tag}</span>)}</div>
             <div className="code-heading"><span>{t('recipe')}</span><span>{t('pseudocode')}</span></div>
             <div className="code-block" aria-label={t('pseudocodeLabel', { name: algorithm.name })} dir="ltr">{algorithm.code.map((line, index) => <div key={line} className={`code-line ${activeLines.includes(index) ? 'code-active' : ''}`}><span aria-hidden="true">{n(index + 1)}</span><code lang="en">{line}</code></div>)}</div>
-            <div className={`operation-note ${complete ? 'operation-complete' : ''}`}><span className="operation-symbol" aria-hidden="true">{complete ? <Icon name="check" /> : 'i'}</span><p data-testid="operation-description">{complete ? t('completeNote') : snapshot.status === 'ready' ? t('readyNote') : operation(snapshot.operation)}</p></div>
+            <div className={`operation-note ${complete ? 'operation-complete' : ''}`}><span className="operation-symbol" aria-hidden="true">{complete ? <Icon name="check" /> : 'i'}</span><p data-testid="operation-description">{snapshot.searchResult ? searchResult(snapshot.searchResult) : complete ? t('completeNote') : snapshot.status === 'ready' ? t(searching ? 'searchReadyNote' : 'readyNote') : operation(snapshot.operation)}</p></div>
             <div className="complexity-grid"><div><span>{t('best')}</span><strong><bdi dir="ltr">{algorithm.best}</bdi></strong></div><div><span>{t('average')}</span><strong><bdi dir="ltr">{algorithm.average}</bdi></strong></div><div><span>{t('worst')}</span><strong><bdi dir="ltr">{algorithm.worst}</bdi></strong></div><div><span>{t('space')}</span><strong><bdi dir="ltr">{algorithm.space}</bdi></strong></div></div>
             <p className="implementation-note">{algorithm.note}</p>
           </aside>
         </div>
-        <section className="metrics" aria-label={t('metrics')}>
-          <div className="metric"><span>{t('comparisons')}</span><strong data-testid="comparisons">{n(snapshot.comparisons)}</strong><small>{t('pairsHint')}</small></div>
-          <div className="metric"><span>{t('writes')}</span><strong data-testid="writes">{n(snapshot.writes)}</strong><small>{t('writesHint')}</small></div>
+        <section className="metrics" aria-label={t(searching ? 'searchMetrics' : 'metrics')}>
+          <div className="metric"><span>{t('comparisons')}</span><strong data-testid="comparisons">{n(snapshot.comparisons)}</strong><small>{t(searching ? 'probesHint' : 'pairsHint')}</small></div>
+          <div className="metric"><span>{t('writes')}</span><strong data-testid="writes">{n(snapshot.writes)}</strong><small>{t(searching ? 'searchWritesHint' : 'writesHint')}</small></div>
           <div className="metric"><span>{t('operations')}</span><strong data-testid="operations" dir="ltr">{n(snapshot.completed)}<em> / {n(snapshot.total)}</em></strong><small>{t('stepsHint')}</small></div>
           <div className="metric"><span>{t('playbackTime')}</span><strong>{n(snapshot.elapsedMs / 1000, 1)}<em> {t('secondsShort')}</em></strong><small>{t('timeHint')}</small></div>
         </section>

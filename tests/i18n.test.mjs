@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { createI18n, MESSAGES } from '../src/i18n/catalog.ts'
-import { ALGORITHM_IDS, ALGORITHMS } from '../src/sorting/algorithms.ts'
+import { ALL_ALGORITHM_IDS, ALGORITHMS } from '../src/sorting/algorithms.ts'
 import { DATASETS, makeDataset } from '../src/sorting/datasets.ts'
 
 test('every interface message has a complete English/Persian pair', () => {
@@ -17,14 +17,15 @@ test('every interface message has a complete English/Persian pair', () => {
 test('algorithm descriptions, tags, datasets, and operation narration all translate without changing traces', () => {
   const en = createI18n('en')
   const fa = createI18n('fa')
-  for (const id of ALGORITHM_IDS) {
+  for (const id of ALL_ALGORITHM_IDS) {
     const translated = fa.algorithm(id)
     for (const text of [translated.name, translated.description, translated.note, ...translated.tags]) {
       assert.ok(/[\u0600-\u06ff]/u.test(text))
       assert.ok(!/[a-z]/i.test(text), `Untranslated metadata: ${text}`)
     }
     for (const pattern of ['reversed', 'duplicates']) {
-      const input = makeDataset(12, 42, pattern)
+      const source = makeDataset(12, 42, pattern)
+      const input = id === 'binary' ? [...source].sort((a, b) => a - b) : source
       const trace = ALGORITHMS[id].trace(input)
       const original = JSON.stringify(trace)
       for (const operation of trace) {

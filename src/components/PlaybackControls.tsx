@@ -18,7 +18,7 @@ export function Icon({ name }: { name: IconName }) {
 
 export const SPEEDS = [6, 12, 24, 48, 96, 192]
 
-export function PlaybackControls({ state, speedIndex, size, onToggle, onStep, onBack, onReset, onSeek, onSpeed, onSize, onShuffle }: {
+export function PlaybackControls({ state, speedIndex, size, onToggle, onStep, onBack, onReset, onSeek, onSpeed, onSize, onShuffle, disabled = false }: {
   state: SessionSnapshot
   speedIndex: number
   size: number
@@ -30,6 +30,7 @@ export function PlaybackControls({ state, speedIndex, size, onToggle, onStep, on
   onSpeed: (index: number) => void
   onSize: (size: number) => void
   onShuffle: () => void
+  disabled?: boolean
 }) {
   const { t, n, rtl } = useI18n()
   const playing = state.status === 'playing'
@@ -38,14 +39,14 @@ export function PlaybackControls({ state, speedIndex, size, onToggle, onStep, on
   return <>
     <div className="timeline-control">
       <label htmlFor="timeline">{t(state.comparing ? 'sharedTimeline' : 'timeline')}<output htmlFor="timeline" dir="ltr">{n(current)} / {n(state.total)}</output></label>
-      <input id="timeline" type="range" min="0" max={state.total} step="1" value={current} aria-valuetext={t('timelineValue', { current, total: state.total })} onChange={(event) => onSeek(Number(event.target.value))} />
+      <input id="timeline" type="range" min="0" max={state.total} step="1" value={current} disabled={disabled} aria-valuetext={t('timelineValue', { current, total: state.total })} onChange={(event) => onSeek(Number(event.target.value))} />
       <p>{t('timelineHint')}</p>
     </div>
     <div className="transport">
       <div className="transport-buttons">
-        <button className="button primary" onClick={onToggle} aria-keyshortcuts="Space"><Icon name={playing ? 'pause' : 'play'} />{t(playing ? 'pause' : complete ? 'replay' : state.status === 'paused' ? 'resume' : state.comparing ? 'startBoth' : 'start')}</button>
-        <button className="icon-button back-button" onClick={onBack} disabled={playing || state.position === 0} aria-label={t('previous')} title={t('previousTitle', { key: t(rtl ? 'rightKey' : 'leftKey') })} aria-keyshortcuts={rtl ? 'ArrowRight' : 'ArrowLeft'}><Icon name="back" /></button>
-        <button className="button secondary step-button" onClick={onStep} disabled={playing || complete} title={t('stepTitle', { key: t(rtl ? 'leftKey' : 'rightKey') })} aria-keyshortcuts={rtl ? 'ArrowLeft' : 'ArrowRight'}><Icon name="step" />{t('step')}</button>
+        <button className="button primary" onClick={onToggle} disabled={disabled} aria-keyshortcuts="Space"><Icon name={playing ? 'pause' : 'play'} />{t(playing ? 'pause' : complete ? 'replay' : state.status === 'paused' ? 'resume' : state.comparing ? 'startBoth' : state.family === 'searching' ? 'startSearch' : 'start')}</button>
+        <button className="icon-button back-button" onClick={onBack} disabled={disabled || playing || state.position === 0} aria-label={t('previous')} title={t('previousTitle', { key: t(rtl ? 'rightKey' : 'leftKey') })} aria-keyshortcuts={rtl ? 'ArrowRight' : 'ArrowLeft'}><Icon name="back" /></button>
+        <button className="button secondary step-button" onClick={onStep} disabled={disabled || playing || complete} title={t('stepTitle', { key: t(rtl ? 'leftKey' : 'rightKey') })} aria-keyshortcuts={rtl ? 'ArrowLeft' : 'ArrowRight'}><Icon name="step" />{t('step')}</button>
         <button className="icon-button" onClick={onReset} aria-label={t('reset')} title={t('resetTitle')} aria-keyshortcuts="R"><Icon name="reset" /></button>
       </div>
       <div className="speed-control"><label htmlFor="speed">{t('speed')} <output htmlFor="speed" dir="ltr">{n(SPEEDS[speedIndex] / 24)}×</output></label><input id="speed" type="range" min="0" max="5" step="1" value={speedIndex} aria-valuetext={t('speedValue', { multiplier: SPEEDS[speedIndex] / 24, rate: SPEEDS[speedIndex] })} onChange={(event) => onSpeed(Number(event.target.value))} /></div>
@@ -54,6 +55,6 @@ export function PlaybackControls({ state, speedIndex, size, onToggle, onStep, on
       <div className="size-control"><label htmlFor="array-size">{t('arraySize')} <output htmlFor="array-size">{n(size)}</output></label><input id="array-size" type="range" min="8" max="96" step="1" value={size} aria-valuetext={n(size)} onChange={(event) => onSize(Number(event.target.value))} /></div>
       <button className="button secondary shuffle" onClick={onShuffle}><Icon name="shuffle" />{t('shuffle')}</button>
     </div>
-    <div className="progress-track" role="progressbar" aria-label={t('progress')} aria-valuenow={Math.round(state.progress * 100)} aria-valuemin={0} aria-valuemax={100}><div style={{ width: `${state.progress * 100}%` }} /></div>
+    <div className="progress-track" role="progressbar" aria-label={t(state.family === 'searching' ? 'searchProgress' : 'progress')} aria-valuenow={Math.round(state.progress * 100)} aria-valuemin={0} aria-valuemax={100}><div style={{ width: `${state.progress * 100}%` }} /></div>
   </>
 }

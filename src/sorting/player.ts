@@ -1,5 +1,5 @@
 import { ALGORITHMS } from './algorithms.ts'
-import type { AlgorithmId, Item, Operation } from './types.ts'
+import { isSearchAlgorithm, type AlgorithmId, type Item, type Operation, type SearchResult } from './types.ts'
 
 export type Status = 'ready' | 'playing' | 'paused' | 'complete'
 
@@ -15,6 +15,8 @@ export interface Snapshot {
   elapsedMs: number
   operation: Operation | null
   values: number[]
+  target: number | null
+  searchResult: SearchResult | null
 }
 
 interface Checkpoint {
@@ -43,6 +45,8 @@ export interface Frame {
   operation: Operation | null
   transition: { indices: readonly [number, number]; progress: number } | null
   writeTransition: { index: number; from: Item; to: Item; progress: number } | null
+  target: number | null
+  searchResult: SearchResult | null
 }
 
 /** Pure playback model. A browser clock supplies elapsed time; no timers live here. */
@@ -60,19 +64,24 @@ export class SortPlayer {
   private speed = 24
   private algorithm: AlgorithmId = 'insertion'
   private checkpoints: Checkpoint[] = []
+  private target = 50
 
-  constructor(values: readonly number[], algorithm: AlgorithmId = 'insertion') {
-    this.load(values, algorithm)
+  constructor(values: readonly number[], algorithm: AlgorithmId = 'insertion', target = 50) {
+    this.load(values, algorithm, target)
   }
 
-  load(values: readonly number[], algorithm: AlgorithmId = this.algorithm): void {
+  load(values: readonly number[], algorithm: AlgorithmId = this.algorithm, target = this.target): void {
     if (values.some((value) => !Number.isFinite(value))) {
       throw new Error('Every array value must be a finite number.')
     }
+    if (!Number.isFinite(target)) throw new Error('Search target must be finite.')
+    // Validate and generate the trace before replacing a valid playback state.
+    const operations = ALGORITHMS[algorithm].trace(values, target)
     this.original = [...values]
     this.algorithm = algorithm
     this.items = values.map((value, id) => ({ value, id }))
-    this.operations = ALGORITHMS[algorithm].trace(values)
+    this.operations = operations
+    this.target = target
     this.buildCheckpoints()
     this.cursor = 0
     this.phase = 0
@@ -91,6 +100,14 @@ export class SortPlayer {
     this.load(this.original, algorithm)
   }
 
+  setTarget(target: number): void { this.load(this.original, this.algorithm, target) }
+
+  private getSearchResult(): SearchResult | null {
+    const operation = this.operations[this.cursor - 1]
+    return operation?.type === 'found' ? { target: operation.target, index: operation.index }
+      : operation?.type === 'miss' ? { target: operation.target, index: null } : null
+  }
+
   getOriginalValues(): number[] {
     return [...this.original]
   }
@@ -107,7 +124,7 @@ export class SortPlayer {
     for (let i = 0; i < this.operations.length; i++) {
       const operation = this.operations[i]
       applyOperation(items, operation)
-      if (operation.type === 'compare') comparisons++
+      if (operation.type === 'compare' || operation.type === 'probe') comparisons++
       writes += writeCount(operation)
       if ((i + 1) % CHECKPOINT_INTERVAL === 0) {
         this.checkpoints.push({ cursor: i + 1, items: [...items], comparisons, writes })
@@ -174,7 +191,7 @@ export class SortPlayer {
   private commit(): void {
     const operation = this.operations[this.cursor++]
     this.lastOperation = operation
-    if (operation.type === 'compare') this.comparisons++
+    if (operation.type === 'compare' || operation.type === 'probe') this.comparisons++
     applyOperation(this.items, operation)
     this.writes += writeCount(operation)
   }
@@ -187,6 +204,8 @@ export class SortPlayer {
       items: this.items,
       status: this.status,
       operation: animating ? pending ?? this.lastOperation : this.lastOperation,
+      target: isSearchAlgorithm(this.algorithm) ? this.target : null,
+      searchResult: this.getSearchResult(),
       transition: pending?.type === 'swap' && this.phase > 0
         ? { indices: pending.indices, progress: this.phase }
         : null,
@@ -211,6 +230,8 @@ export class SortPlayer {
       elapsedMs: this.elapsedMs,
       operation: this.getFrame().operation,
       values: this.items.map((item) => item.value),
+      target: isSearchAlgorithm(this.algorithm) ? this.target : null,
+      searchResult: this.getSearchResult(),
     }
   }
 }

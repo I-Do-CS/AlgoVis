@@ -1,6 +1,7 @@
 import { insertionTrace } from './insertion.ts'
 import { countingTrace, radixTrace } from './distribution.ts'
-import type { Algorithm, AlgorithmId, Item, MergeBuffer, Operation } from './types.ts'
+import { binaryTrace, linearTrace } from '../searching/algorithms.ts'
+import type { Algorithm, AlgorithmId, Item, MergeBuffer, Operation, SearchAlgorithmId, SortAlgorithmId } from './types.ts'
 
 function bubbleTrace(input: readonly number[]): Operation[] {
   const values = [...input]
@@ -114,7 +115,9 @@ function quickTrace(input: readonly number[]): Operation[] {
   return operations
 }
 
-export const ALGORITHM_IDS: readonly AlgorithmId[] = ['insertion', 'bubble', 'selection', 'merge', 'quick', 'counting', 'radix']
+export const ALGORITHM_IDS: readonly SortAlgorithmId[] = ['insertion', 'bubble', 'selection', 'merge', 'quick', 'counting', 'radix']
+export const SEARCH_ALGORITHM_IDS: readonly SearchAlgorithmId[] = ['linear', 'binary']
+export const ALL_ALGORITHM_IDS: readonly AlgorithmId[] = [...ALGORITHM_IDS, ...SEARCH_ALGORITHM_IDS]
 export const ALGORITHMS: Record<AlgorithmId, Algorithm> = {
   insertion: {
     id: 'insertion', name: 'Insertion sort', description: 'Like sorting a hand of cards. Pick an element, move it left until it fits, and repeat.',
@@ -157,5 +160,17 @@ export const ALGORITHMS: Record<AlgorithmId, Algorithm> = {
     tags: ['Distribution sort', 'Stable', 'Digit passes'], best: 'O(d(n + b))', average: 'O(d(n + b))', worst: 'O(d(n + b))', space: 'O(n + b)',
     code: ['for each digit, from units upward', 'count items in digit buckets 0 … 9', 'accumulate bucket counts', 'place items right to left in output', 'copy output back to the array', 'continue to the next digit'],
     note: 'd is the number of digits and b = 10. Negative integers use a shared offset. Each pass is stable; only writes to the main array count as writes.', trace: radixTrace,
+  },
+  linear: {
+    id: 'linear', name: 'Linear search', description: 'Check one value at a time from left to right. Stop at the first match, or finish after every element has been checked.',
+    tags: ['Sequential search', 'Unsorted input', 'Read-only'], best: 'O(1)', average: 'O(n)', worst: 'O(n)', space: 'O(1)',
+    code: ['for i = 0 … n − 1', '  compare a[i] with target', '  if equal: return i', 'return not found'],
+    note: 'Works in any input order and returns the first match. One comparison counts one value-to-target probe. Displayed positions start at 1; the array is never changed.', trace: linearTrace,
+  },
+  binary: {
+    id: 'binary', name: 'Binary search', description: 'Probe the middle of an ascending array. Discard the half that cannot contain the target, then repeat within the remaining range.',
+    tags: ['Interval search', 'Sorted input', 'Read-only'], best: 'O(1)', average: 'O(log n)', worst: 'O(log n)', space: 'O(1)',
+    code: ['low = 0; high = n − 1', 'while low ≤ high', '  mid = floor((low + high) / 2)', '  compare a[mid] with target', '  if equal: return mid', '  if a[mid] < target: low = mid + 1', '  else: high = mid − 1', 'return not found'],
+    note: 'Requires ascending input; the app prepares and labels a sorted copy before playback. Preparation is excluded from search counts. May return any matching duplicate. Displayed positions start at 1.', trace: binaryTrace,
   },
 }
