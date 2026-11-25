@@ -1,6 +1,6 @@
 # AlgoVis (Algorithm Visualizer)
 
-Created by **Ali Ghelichkhani**. A browser-based sorting visualizer built with React, TypeScript, Vite, and Canvas.
+Created by **Ali Ghelichkhani**. A browser-based sorting and searching visualizer built with React, TypeScript, Vite, and Canvas.
 
 [Source code on GitHub](https://github.com/I-Do-CS/AlgoVis). The application lives directly in the repository root.
 
@@ -41,13 +41,13 @@ PLAYWRIGHT_BROWSER=firefox npm run test:e2e
 
 ## Features
 
-Five algorithms: insertion sort, bubble sort, selection sort, merge sort, and quicksort. All use the same playback controls: play/pause, stepping forward and backward, timeline scrubbing, reset, replay, and live speed changes. Arrays default to 50 elements and can be resized from 8 to 96.
+Seven sorting algorithms: insertion sort, bubble sort, selection sort, merge sort, quicksort, counting sort, and radix sort. Two searching algorithms: linear search and binary search. All use the same playback controls: play/pause, stepping forward and backward, timeline scrubbing, reset, replay, and live speed changes. Arrays default to 50 elements and can be resized from 8 to 96.
 
-Five dataset presets: random, sorted, reversed, nearly sorted, and many duplicates. Switching algorithms always restores the exact original array. Changing dataset or size cancels playback and creates a fresh input. Shuffle permutes the original values, preserving their multiset even while merge sort has temporarily overwritten some main-array values. Shuffle changes ordered presets to Random; duplicate-heavy inputs keep their preset.
+Five dataset presets: random, sorted, reversed, nearly sorted, and many duplicates. Switching sorting algorithms restores the exact original array; binary search uses an explicitly labeled ascending copy. Changing dataset or size cancels playback and creates a fresh input. Shuffle permutes the original values, preserving their multiset even while merge sort has temporarily overwritten some main-array values. Shuffle changes ordered presets to Random; duplicate-heavy inputs keep their preset.
 
-The Canvas shows smooth swaps and writes, active ranges, quicksort pivots, selection-sort minima, and merge sort's auxiliary buffer. The sidebar follows the selected algorithm with pseudocode, operation explanations, stability, and best/average/worst time and space complexity. Includes keyboard controls, responsive layouts, reduced-motion support, live metrics, and inspectable array values.
+The Canvas shows smooth swaps and writes, active ranges, quicksort pivots, selection-sort minima, merge sort's auxiliary buffer, frequency buckets and cumulative positions for counting sort, decimal digit passes for radix sort, and search probes, targets, and remaining candidate ranges. The sidebar follows the selected algorithm with pseudocode, operation explanations, stability, and best/average/worst time and space complexity. Includes keyboard controls, responsive layouts, reduced-motion support, live metrics, and inspectable array values.
 
-**Explore** follows one algorithm with pseudocode. **Compare** runs two algorithms on exactly the same original input, with a shared timeline and step rate. A finished side holds its final state while the other continues. The panels appear side by side on desktop and stack on smaller screens. Once both finish, results identify fewer comparisons, main-array writes, and visual steps, including ties. Selecting the same algorithm twice is supported.
+**Explore** follows one algorithm with pseudocode. **Compare** runs two algorithms on exactly the same original input, with a shared timeline and step rate. A finished side holds its final state while the other continues. The panels appear side by side on desktop and stack on smaller screens. Once both finish, sorting results identify fewer comparisons, main-array writes, and visual steps, including ties. Search results compare value-to-target probes and visual steps. Selecting the same algorithm twice is supported.
 
 The timeline uses completed operation counts. Scrubbing pauses playback and restores the requested state, counters, highlights, and identities. A shared timeline extends to the longer trace; shorter traces remain at their endpoint. Seeking resets the animation timer, which then measures playback since the most recent seek or reset. Changing view mode or either comparison algorithm restarts both players from their shared original input.
 
@@ -56,7 +56,17 @@ The timeline uses completed operation counts. Scrubbing pauses playback and rest
 - Left arrow (English) / Right arrow (Persian): return to the previous operation boundary and pause
 - R: restore the exact starting array
 
-Shortcuts defer to focused form controls. Playback time measures animation time and is not a CPU benchmark. The operation count includes visualized selections and range splits as well as comparisons, swaps, and writes. A swap counts as two main-array writes. Merge sort counts each placement back into the main array as one write; preparing its auxiliary buffer is excluded.
+Shortcuts defer to focused form controls. Playback time measures animation time and is not a CPU benchmark. The operation count includes visualized selections and range splits as well as comparisons, swaps, and writes. A swap counts as two main-array writes. Merge sort counts each placement back into the main array as one write; preparing its auxiliary buffer is excluded. Counting and radix sorts count only placements back into the main array as writes. Their bucket updates, prefix accumulation, stable output placements, and digit-pass setup are visual steps, and they perform no pairwise sorting comparisons.
+
+## Searching
+
+Use the **Sorting / Searching** switch to choose the algorithm family. Both families support Explore and Compare, shared playback controls, timeline scrubbing, keyboard navigation, live statistics, and English/Persian localization.
+
+Enter a finite target number or choose **Pick an array value**. Target changes reset both searches and clear previous results. Empty or invalid target input disables playback until corrected. Linear search follows the selected dataset order and returns the first match. Binary search requires ascending input: the session preserves the source dataset and prepares a sorted copy before playback. A visible hint explains that displayed positions refer to this copy. If either active comparison algorithm is binary search, both searches receive the same ascending copy and target; two linear searches use the original dataset order. Switching back to linear Explore or to sorting restores the source order.
+
+Searches leave values and identities unchanged. One comparison means one value-to-target probe. Results report a match at a position starting from 1, or explicitly report that the target is absent. Binary search may return any matching duplicate. Seeking backward clears results that have not yet occurred. The sorting preparation cost for binary search is excluded from search operation counts, playback time, and the displayed search complexity.
+
+Counting sort supports safe integers with a value range of at most 1024. Radix sort uses stable decimal counting passes and accepts safe integers whose normalized key range is safe; negative inputs use a common offset. The app's generated integer values are within both domains. Bucket panels show frequencies, cumulative counts, next output positions starting from zero, and copy-back phases; these intermediate positions are separate from the result positions starting from 1.
 
 ## Languages and direction
 
@@ -71,13 +81,14 @@ Vazirmatn, DM Sans, and Manrope are hosted under `public/fonts` so font delivery
 ## Architecture
 
 - `src/sorting/types.ts`: shared operation types, element identities, and algorithm metadata.
-- `src/sorting/algorithms.ts` and `insertion.ts`: record operations without mutating input. Quicksort uses a last-element pivot, recurses only on the smaller partition, and iterates over the larger partition to bound call-stack space by O(log n).
+- `src/sorting/algorithms.ts`, `insertion.ts`, and `distribution.ts`: record operations without mutating input. Quicksort uses a last-element pivot, recurses only on the smaller partition, and iterates over the larger partition to bound call-stack space by O(log n).
+- `src/searching/algorithms.ts`: linear and binary search traces with target probes, shrinking ranges, and terminal found/not-found events. Binary traces reject unsorted input; the session handles the visible preparation.
 - `src/sorting/datasets.ts`: reproducible presets and multiset-preserving shuffles.
-- `src/sorting/player.ts`: pure playback model driven by elapsed time, supporting swaps, buffer writes, and checkpoint-based seeking. A checkpoint stores the item references and counters every 64 operations; seeking replays at most 63 operations after restoring one.
-- `src/sorting/session.ts`: shared input and playback controller for one or two players, including comparison seek, reset, completed-player hold, and algorithm/mode changes.
+- `src/sorting/player.ts`: pure playback model driven by elapsed time, supporting swaps, buffer writes, search probes/results, target changes, and checkpoint-based seeking. A checkpoint stores the item references and counters every 64 operations; seeking replays at most 63 operations after restoring one.
+- `src/sorting/session.ts`: shared input and playback controller for one or two players, including comparison seek, reset, completed-player hold, algorithm/family changes, a shared search target, and sorted-copy preparation without losing the source order.
 - `src/hooks/usePlaybackClock.ts`: one browser animation clock advances the session. React updates controls and counters separately.
 - `src/components/BarCanvas.tsx`: Canvas rendering and interpolated swaps/writes; canvases do not advance their own players.
-- `src/components/PlaybackControls.tsx`, `ArrayPlot.tsx`, and `ComparisonView.tsx`: shared playback UI, chart presentation, and comparison panels/results.
+- `src/components/PlaybackControls.tsx`, `ArrayPlot.tsx`, `ComparisonView.tsx`, `BucketPanel.tsx`, and `SearchSetup.tsx`: shared playback UI, chart presentation, bucket phases, target input, and comparison panels/results.
 
 Traces are precomputed for bounded arrays. Quadratic algorithms can record O(n²) events. Merge events retain shared immutable run buffers for their source reads. Checkpoint arrays share immutable items while preserving each operation boundary's ordering. The displayed algorithm-space complexity excludes the visualization trace and playback state. Larger datasets would benefit from buffered operation generation and a configurable checkpoint interval.
 
@@ -87,7 +98,7 @@ The model suites cover all algorithms and presets, duplicate stability, known co
 
 ## Development milestones
 
-The current release includes the playback foundation, five sorting algorithms and dataset presets, timeline scrubbing, synchronized comparisons, and English/Persian localization with RTL support. See [MILESTONES.md](MILESTONES.md) for implementation history.
+The current release includes seven sorting algorithms, two searching algorithms, five dataset presets, timeline scrubbing, synchronized comparisons, bucket/pass displays, target selection, and English/Persian localization with RTL support. See [MILESTONES.md](MILESTONES.md) for implementation history.
 
 ## Hosting
 

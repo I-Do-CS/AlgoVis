@@ -62,6 +62,24 @@ The public repository is [I-Do-CS/AlgoVis](https://github.com/I-Do-CS/AlgoVis). 
 
 Verification: all 33 model/localization tests and the production build pass. Targeted Firefox checks cover branding and Persian layouts across phone, tablet, and desktop sizes.
 
+## Milestone 6 — Counting and radix sorting
+
+Added stable Counting Sort and decimal LSD Radix Sort with immutable bucket states, frequency counting, cumulative positions, stable output placement, and animated main-array writes. Both integrate with Explore, Compare, checkpoint seeking, speed controls, reset/replay, and English/Persian narration. Counting sort bounds the integer value range to 1024; radix sort validates safe integer keys and supports negative values through an offset.
+
+Verification at this checkpoint: 40 model/localization tests and the production build passed, including every generated preset, signed integers, duplicate stability, per-pass radix ordering, write counts, input validation, and checkpoint restoration.
+
+## Milestone 7 — Linear and binary searching
+
+Added the Sorting/Searching family switch, shared search targets, value picker, probe operations, candidate ranges, terminal results, and search-aware statuses, metrics, legends, and explanations. Search playback reuses the existing clock, timeline, stepping, and comparison controls. Linear search returns the first match; binary search may return any matching duplicate. Search result positions start at 1.
+
+The session retains the source dataset while preparing an explicitly labeled ascending copy for binary search. If either active comparison is binary, both searches use the same sorted copy and target. Returning to linear Explore or sorting restores source order. Preparing that copy is excluded from the search operation counts and complexity. Invalid target input disables playback; target changes clear previous results.
+
+Verification at this checkpoint: all 47 model/localization tests and the production build passed, including empty arrays, hits/misses, duplicates, negative/fractional targets, probe bounds, comparison limits, result visibility, checkpoint seeking, pause/replay, target reset, source-order restoration, and sorted-input validation.
+
+## Milestone 8 — Release 0.5.0 verification
+
+All 32 Firefox browser checks passed, including Counting/Radix playback, search hits/misses and target validation, shared search inputs/results, reverse seeking, existing sorting behavior, and English/Persian layouts from 320 to 1440 pixels. A Persian search-setup grid overflow at tablet width was fixed. Persian desktop and mobile screenshots were reviewed. The README documents the new algorithm families, domains, preparation, and metric semantics; the existing GitHub footer and creator credit are retained.
+
 ## Allowance workflow
 
 Run `python3 ~/codex/usage.py` before implementation, after each implementation step, and at each milestone handoff. Inspect both the five-hour and weekly windows before starting more work. If the script fails or the remaining allowance is too low for the next step, preserve progress and stop rather than assume capacity. Review checkpoints are separate from allowance checks.

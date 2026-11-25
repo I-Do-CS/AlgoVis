@@ -41,9 +41,15 @@ function draw(canvas: HTMLCanvasElement, frame: Frame, reducedMotion: boolean, r
     context.font = font(rtl ? 12 : 10)
     context.textAlign = 'left'
     context.fillStyle = '#95a9b5'
-    caption(t('noBuffer'))
+    caption(frame.target !== null ? t('targetMarker', { target: frame.target }) : t('noBuffer'))
     context.strokeStyle = '#2b3c47'
     context.beginPath(); context.moveTo(0, 61); context.lineTo(width, 61); context.stroke()
+  }
+
+  if (searching && !reserveBuffer) {
+    context.font = font(12)
+    context.fillStyle = '#c9b9f2'
+    caption(t('targetMarker', { target: frame.target! }))
   }
 
   if (merging) {
@@ -128,10 +134,7 @@ function draw(canvas: HTMLCanvasElement, frame: Frame, reducedMotion: boolean, r
     const y = height - bottom - (frame.target / 100) * plotHeight
     context.strokeStyle = '#b7a1ed'; context.setLineDash([5, 4])
     context.beginPath(); context.moveTo(0, y); context.lineTo(width, y); context.stroke()
-    context.setLineDash([]); context.font = font(11); context.fillStyle = '#c9b9f2'
-    context.direction = rtl ? 'rtl' : 'ltr'; context.textAlign = rtl ? 'left' : 'right'
-    context.fillText(t('targetMarker', { target: frame.target }), rtl ? 2 : width - 2, Math.max(14, y - 7))
-    context.direction = 'ltr'
+    context.setLineDash([])
   }
   context.font = font(11); context.fillStyle = '#6f8491'; context.textAlign = 'left'
   context.fillText(n(1), 1, height - 7)

@@ -1,7 +1,7 @@
 {
   "name": "algovis",
   "private": true,
-  "version": "0.4.1",
+  "version": "0.5.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -24,7 +24,7 @@
     "typescript": "~7.0.2",
     "vite": "^8.3.6"
   },
-  "description": "AlgoVis (Algorithm Visualizer) \u2014 an interactive sorting playground.",
+  "description": "AlgoVis (Algorithm Visualizer) \u2014 interactive sorting and searching with English/Persian support.",
   "author": "Ali Ghelichkhani",
   "repository": {
     "type": "git",

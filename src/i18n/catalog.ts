@@ -127,7 +127,7 @@ export const MESSAGES = {
   buffer: ['AUXILIARY BUFFER', 'بافر کمکی'],
   mergeComplete: ['MERGE COMPLETE', 'ادغام کامل شد'],
   bufferWaiting: ['AUXILIARY BUFFER · BUILT AS RUNS MERGE', 'بافر کمکی · هنگام ادغام ساخته می‌شود'],
-  outputWaiting: ['OUTPUT BUFFER · BUILT FROM BUCKET POSITIONS', 'بافر خروجی · با جایگاه‌های سطل‌ها ساخته می‌شود'],
+  outputWaiting: ['OUTPUT BUFFER · WAITING', 'بافر خروجی · در انتظار'],
   outputComplete: ['OUTPUT COMPLETE', 'خروجی کامل شد'],
   buckets: ['Bucket values', 'مقادیر سطل‌ها'],
   bucketCount: ['Frequency buckets', 'سطل‌های فراوانی'],

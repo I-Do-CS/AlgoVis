@@ -15,6 +15,7 @@ async function prepare(page: Page) {
 for (const [id, name] of [
   ['insertion', 'Insertion sort'], ['bubble', 'Bubble sort'], ['selection', 'Selection sort'],
   ['merge', 'Merge sort'], ['quick', 'Quicksort'],
+  ['counting', 'Counting sort'], ['radix', 'Radix sort'],
 ]) {
   test(`${name} sorts duplicate values and resets to the exact original input`, async ({ page }) => {
     const errors: string[] = []
@@ -101,7 +102,7 @@ test('switching algorithms or shuffling during a merge preserves the original mu
 
 test('all algorithms fit phone, tablet, and desktop layouts', async ({ page }) => {
   await page.goto('/')
-  for (const id of ['insertion', 'bubble', 'selection', 'merge', 'quick']) {
+  for (const id of ['insertion', 'bubble', 'selection', 'merge', 'quick', 'counting', 'radix']) {
     await page.getByRole('combobox', { name: 'Algorithm', exact: true }).selectOption(id)
     for (const width of [320, 768, 1024, 1440]) {
       await page.setViewportSize({ width, height: 1100 })
@@ -109,6 +110,7 @@ test('all algorithms fit phone, tablet, and desktop layouts', async ({ page }) =
       expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth), `${id} overflows at ${width}px`).toBe(false)
     }
   }
+  await page.getByRole('combobox', { name: 'Algorithm', exact: true }).selectOption('quick')
   await page.getByRole('button', { name: 'Step', exact: true }).click()
   await expect(page.getByTestId('operation-description')).toContainText('pivot')
   await expect(page.locator('.legend')).toContainText('Pivot')
