@@ -222,3 +222,6 @@ html[lang='fa'] .comparison-stats strong { font-family: 'Vazirmatn', sans-serif;
 .brand { width: max-content; justify-self: start; }
 .topbar .language-toggle { margin-inline-start: 0; }
 @media (max-width: 1120px) { .topbar .language-toggle { margin-inline-start: auto; } }
+.source-link { display: inline-flex; align-items: center; gap: 8px; color: #b4d9df; font-size: 13px; line-height: 1.7; }
+.source-link svg { width: 17px; height: 17px; fill: currentColor; flex: none; }
+.source-link:hover { color: #e0f7f8; text-decoration: underline; text-underline-offset: 4px; }

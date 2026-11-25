@@ -44,6 +44,7 @@ export const MESSAGES = {
   secondsShort: ['s', 'ثانیه'],
   inspect: ['Inspect array values', 'بررسی مقادیر آرایه'],
   creator: ['Created by', 'ساخته‌شده توسط'],
+  sourceCode: ['View on GitHub', 'مشاهده در گیت‌هاب'],
   keyboardPlay: ['play / pause', 'پخش / توقف'],
   keyboardBack: ['back', 'گام قبل'],
   keyboardStep: ['step', 'گام بعد'],

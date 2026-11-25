@@ -1,7 +1,7 @@
 {
   "name": "algovis",
   "private": true,
-  "version": "0.4.0",
+  "version": "0.4.1",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -25,5 +25,12 @@
     "vite": "^8.3.6"
   },
   "description": "AlgoVis (Algorithm Visualizer) \u2014 an interactive sorting playground.",
-  "author": "Ali Ghelichkhani"
+  "author": "Ali Ghelichkhani",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/I-Do-CS/AlgoVis.git"
+  },
+  "bugs": {
+    "url": "https://github.com/I-Do-CS/AlgoVis/issues"
+  }
 }

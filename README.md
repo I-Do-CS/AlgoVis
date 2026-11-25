@@ -2,13 +2,15 @@
 
 Created by **Ali Ghelichkhani**. A browser-based sorting visualizer built with React, TypeScript, Vite, and Canvas.
 
-The application lives directly in the repository root (`/home/idocs/projects/algovis`).
+[Source code on GitHub](https://github.com/I-Do-CS/AlgoVis). The application lives directly in the repository root.
 
 ## Develop
 
 Use Node.js 22.12+ and a native npm installation for your operating system.
 
 ```sh
+git clone https://github.com/I-Do-CS/AlgoVis.git
+cd AlgoVis
 npm ci
 npm run dev
 ```
@@ -83,6 +85,10 @@ Merge sort can temporarily duplicate or omit a value in the main array while cop
 
 The model suites cover all algorithms and presets, duplicate stability, known counts, pause/resume, stepping, reset, replay, interrupted merge writes, original-input preservation, frame rates, checkpoint boundaries, seeking, and comparison synchronization. The Playwright suites cover real browser interactions, comparison results, responsive rendering, reduced motion, AlgoVis branding, and creator credit.
 
-## Milestones
+## Development milestones
 
-See [MILESTONES.md](MILESTONES.md). Each milestone ends with verification, an allowance check using `~/codex/usage.py`, and a review handoff.
+The current release includes the playback foundation, five sorting algorithms and dataset presets, timeline scrubbing, synchronized comparisons, and English/Persian localization with RTL support. See [MILESTONES.md](MILESTONES.md) for implementation history.
+
+## Hosting
+
+`npm run build` creates the static application in `dist/`, which can be served by a static web host. The footer links to this public repository in both languages.

@@ -43,7 +43,7 @@ Verification: 30 model tests and 18 Firefox browser tests passed. New coverage i
 
 ## Milestone 4 — English/Persian and RTL
 
-Status: implemented and verified; ready for user review.
+Status: implemented and verified locally; publication blocked by repeated source-upload connection resets.
 
 - Header language toggle with persistent preference and smooth, cancelable transitions.
 - Persian labels, algorithm metadata, live narration, dataset names, comparison results, tooltips, accessibility labels, and number formatting.
@@ -53,6 +53,14 @@ Status: implemented and verified; ready for user review.
 - Locally hosted Vazirmatn, DM Sans, and Manrope, with their font licenses.
 
 Verification: all 33 model/localization tests and 25 Firefox browser tests passed. Browser coverage includes locale persistence, rapid switch requests, reduced-motion and legacy-browser fallbacks, RTL shortcuts, state preservation, comparison results, LTR islands, header alignment, and layouts from 320 to 1440 pixels. Persian desktop/mobile screenshots were reviewed. An observed fallback-animation cancellation issue was fixed, and external English-font requests that intermittently blocked page load were replaced with local assets. The final production build is part of packaging.
+
+Publication recovery: the final production build passed, and the feature was committed locally as `a1514caa6b813df2a746f913e85bbfd683b3681f`. Three source pushes ended with `RPC failed; curl 56 Recv failure: Connection reset by peer`. Recovery included reconciling the existing remote, fresh credentials, HTTP/1.1, and a larger upload buffer; Git transport changes were temporary process settings. No new Site version was saved or deployed, so the live Site remains on milestone 3. Preserve the existing project ID, reconcile remote state again, and retry the Sites source/package/deploy workflow after upload connectivity recovers. The application source and build remain available locally; this status note was added after the feature commit.
+
+## Milestone 5 — Public GitHub repository
+
+The public repository is [I-Do-CS/AlgoVis](https://github.com/I-Do-CS/AlgoVis). The footer includes a GitHub link in English and Persian, and the README includes clone and development instructions. The application remains credited to Ali Ghelichkhani.
+
+Verification: all 33 model/localization tests and the production build pass. Targeted Firefox checks cover branding and Persian layouts across phone, tablet, and desktop sizes.
 
 ## Allowance workflow
 
