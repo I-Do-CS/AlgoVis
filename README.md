@@ -68,6 +68,8 @@ Searches leave values and identities unchanged. One comparison means one value-t
 
 Counting sort supports safe integers with a value range of at most 1024. Radix sort uses stable decimal counting passes and accepts safe integers whose normalized key range is safe; negative inputs use a common offset. The app's generated integer values are within both domains. Bucket panels show frequencies, cumulative counts, next output positions starting from zero, and copy-back phases; these intermediate positions are separate from the result positions starting from 1.
 
+Radix sort identifies each units/tens/hundreds pass and the digit of the current key. Intermediate passes sort only the digits processed so far, so even an already numerically sorted input can temporarily look unsorted. Counting and radix output rows fill one slot at a time. Copy-back animates an actual value from that row into the main array; temporary repeats in the main row are expected while the immutable output buffer retains all values. Digit-pass completion is an explicit visual step, and seeking backward restores partial output and pass metadata.
+
 ## Languages and direction
 
 The header's EN / فارسی toggle switches between English and Persian, remembers the choice in browser storage, and updates document language, direction, title, and description. Switching language preserves the active input, algorithms, timeline, speed, counters, and playback state. Supported browsers crossfade through a View Transition; other browsers use a brief fade. Reduced-motion preferences disable the effect, and rapid switches cancel earlier transitions.

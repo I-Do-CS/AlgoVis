@@ -57,17 +57,25 @@ function draw(canvas: HTMLCanvasElement, frame: Frame, reducedMotion: boolean, r
     context.textAlign = 'left'
     context.fillStyle = '#95a9b5'
     const buffer = complete ? undefined : operation?.buffer
-    caption(t(buffer ? 'buffer' : complete ? distribution ? 'outputComplete' : 'mergeComplete' : distribution ? 'outputWaiting' : 'bufferWaiting'))
-    if (buffer) {
+    const output = operation?.buckets
+    caption(t(distribution ? complete ? 'outputComplete' : 'outputBuffer' : buffer ? 'buffer' : complete ? 'mergeComplete' : 'bufferWaiting'))
+    if (distribution || buffer) {
       const reading = operation?.type === 'compare' && operation.source === 'buffer' ? operation.indices
+        : distribution && output?.outputIndex !== undefined ? [output.outputIndex]
         : operation?.type === 'write' ? [operation.sourceIndex] : []
-      for (let i = 0; i < buffer.items.length; i++) {
-        const index = buffer.start + i
-        const item = buffer.items[i]
-        const selected = reading.includes(index)
-        const bufferHeight = Math.max(3, (item.value / 100) * 23)
+      const count = distribution ? frame.items.length : buffer!.items.length
+      for (let i = 0; i < count; i++) {
+        const index = (distribution ? 0 : buffer!.start) + i
+        const item = distribution ? output?.output[i] : buffer!.items[i]
+        const selected = !complete && reading.includes(index)
         const x = index * slotWidth + gap / 2
-        context.fillStyle = selected ? operation?.type === 'write' ? '#ed9abd' : '#edc07a' : '#5b8796'
+        if (distribution) {
+          context.strokeStyle = '#30434e'
+          context.strokeRect(x + .5, 23.5, Math.max(1, barWidth - 1), 30)
+        }
+        if (!item) continue
+        const bufferHeight = Math.max(3, (item.value / 100) * 23)
+        context.fillStyle = selected ? distribution || operation?.type === 'write' ? '#ed9abd' : '#edc07a' : '#5b8796'
         context.fillRect(x, 53 - bufferHeight, barWidth, bufferHeight)
         if (slotWidth >= 24) {
           context.font = font(11)
@@ -105,15 +113,16 @@ function draw(canvas: HTMLCanvasElement, frame: Frame, reducedMotion: boolean, r
         lift = Math.sin(transition.progress * Math.PI) * (index === a ? -9 : 9)
       }
     }
-    const value = write?.index === index ? write.from.value + (write.to.value - write.from.value) * ease(write.progress) : item.value
+    const value = !distribution && write?.index === index ? write.from.value + (write.to.value - write.from.value) * ease(write.progress) : item.value
     const barHeight = (value / 100) * plotHeight
     const highlighted = active.includes(index) && !complete
     const reference = operation?.pivotId === item.id || operation?.minimumId === item.id
-    const moving = operation?.type === 'swap' || operation?.type === 'write'
+    const moving = operation?.type === 'swap' || operation?.type === 'write' || operation?.buckets?.phase === 'place'
     const matched = searching && frame.searchResult?.index === index
     const finished = complete && !searching
     const color = matched || finished ? '#63d9b1' : reference ? '#b7a1ed' : highlighted ? moving ? '#ed9abd' : '#edc07a' : '#69cbd4'
     context.globalAlpha = range && (index < range[0] || index > range[1]) ? 0.38 : 1
+    if (distribution && write?.index === index) context.globalAlpha *= 1 - ease(write.progress)
     const gradient = context.createLinearGradient(0, height - bottom - barHeight, 0, height - bottom)
     gradient.addColorStop(0, color)
     gradient.addColorStop(1, matched || finished ? '#307c6b' : reference ? '#63517e' : highlighted ? '#655b57' : '#2b6877')
@@ -129,6 +138,24 @@ function draw(canvas: HTMLCanvasElement, frame: Frame, reducedMotion: boolean, r
       context.fillText(n(item.value), x + barWidth / 2, height - bottom - barHeight - 9 + lift)
     }
     context.globalAlpha = 1
+  }
+  // Distribution passes copy actual items from the output row. Interpolating the
+  // destination's value made bars appear to turn into unrelated numbers.
+  if (distribution && write) {
+    const progress = ease(write.progress)
+    const fromHeight = Math.max(3, (write.to.value / 100) * 23)
+    const toHeight = (write.to.value / 100) * plotHeight
+    const barHeight = fromHeight + (toHeight - fromHeight) * progress
+    const y = (53 - fromHeight) + ((height - bottom - toHeight) - (53 - fromHeight)) * progress
+    const x = write.index * slotWidth + gap / 2
+    const gradient = context.createLinearGradient(0, y, 0, y + barHeight)
+    gradient.addColorStop(0, '#ed9abd'); gradient.addColorStop(1, '#655b57')
+    context.fillStyle = gradient
+    context.beginPath(); context.roundRect(x, y, barWidth, barHeight, [3, 3, 0, 0]); context.fill()
+    if (slotWidth >= 24) {
+      context.font = font(12); context.textAlign = 'center'; context.fillStyle = '#ed9abd'
+      context.fillText(n(write.to.value), x + barWidth / 2, y - 9)
+    }
   }
   if (frame.target !== null && frame.target >= 0 && frame.target <= 100) {
     const y = height - bottom - (frame.target / 100) * plotHeight

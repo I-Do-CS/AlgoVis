@@ -6,15 +6,19 @@ export const isSearchAlgorithm = (id: AlgorithmId): id is SearchAlgorithmId => i
 export type SearchResult = { readonly target: number; readonly index: number | null }
 export type Item = { readonly id: number; readonly value: number }
 export type MergeBuffer = { readonly start: number; readonly items: readonly Item[] }
+export type RadixPass = { readonly digit: number; readonly index: number; readonly total: number; readonly offset: number }
 export type BucketState = {
   readonly labels: readonly number[]
   readonly counts: readonly number[]
   readonly active: number
-  readonly phase: 'count' | 'prefix' | 'place' | 'write'
-  readonly digit?: number
+  readonly phase: 'count' | 'prefix' | 'place' | 'write' | 'pass-complete'
+  readonly output: readonly (Item | null)[]
+  readonly outputIndex?: number
+  readonly radix?: RadixPass
+  readonly source?: { readonly value: number; readonly key: number }
 }
 
-export type NarrationKey = 'opPick' | 'opNeighbors' | 'opInsertSwap' | 'opSweep' | 'opBubbleSwap' | 'opFindMinimum' | 'opCompareMinimum' | 'opNewMinimum' | 'opPlaceMinimum' | 'opSplit' | 'opBufferCompare' | 'opWrite' | 'opPivot' | 'opPivotCompare' | 'opPartition' | 'opPlacePivot' | 'opCount' | 'opPrefix' | 'opBucketPlace' | 'opDigitPass' | 'opProbe' | 'opSearchRange' | 'opDiscardLeft' | 'opDiscardRight' | 'opFound' | 'opMiss'
+export type NarrationKey = 'opPick' | 'opNeighbors' | 'opInsertSwap' | 'opSweep' | 'opBubbleSwap' | 'opFindMinimum' | 'opCompareMinimum' | 'opNewMinimum' | 'opPlaceMinimum' | 'opSplit' | 'opBufferCompare' | 'opWrite' | 'opPivot' | 'opPivotCompare' | 'opPartition' | 'opPlacePivot' | 'opCount' | 'opPrefix' | 'opBucketPlace' | 'opDigitPass' | 'opRadixCount' | 'opPassComplete' | 'opProbe' | 'opSearchRange' | 'opDiscardLeft' | 'opDiscardRight' | 'opFound' | 'opMiss'
 
 interface Context {
   lines: readonly number[]

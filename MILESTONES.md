@@ -80,6 +80,14 @@ Verification at this checkpoint: all 47 model/localization tests and the product
 
 All 32 Firefox browser checks passed, including Counting/Radix playback, search hits/misses and target validation, shared search inputs/results, reverse seeking, existing sorting behavior, and English/Persian layouts from 320 to 1440 pixels. A Persian search-setup grid overflow at tablet width was fixed. Persian desktop and mobile screenshots were reviewed. The README documents the new algorithm families, domains, preparation, and metric semantics; the existing GitHub footer and creator credit are retained.
 
+## Milestone 9 — Radix visualization audit and corrections
+
+The audit found no final-ordering failures in 107 input cases, including generated presets and safe-integer boundaries. A further 320,000 digit extractions matched an exact integer reference. Two presentation defects were reproduced: output placements were narrated while the output row remained empty, and copy-back morphed a destination bar's height instead of showing the incoming item.
+
+Distribution traces now retain immutable, partially filled output arrays. Counting and radix render those slots during placement and animate copies from the output row into the main array. Radix exposes named digit passes, active key digits, offsets, and explicit pass-completion steps. Explanations distinguish intermediate digit order and temporary copy-back repeats from the final sorted array. Full values and identities remain preserved in the output buffer throughout a copy.
+
+Verification: all 51 model/localization tests and 33 Firefox checks passed. New regressions cover incremental output, snapshot immutability, pass resets/boundaries, reverse seeking, signed and safe-integer keys, a partially animated copy, and Persian/mobile layouts. Desktop, Persian mobile, and a paused copy-animation screenshot were reviewed.
+
 ## Allowance workflow
 
 Run `python3 ~/codex/usage.py` before implementation, after each implementation step, and at each milestone handoff. Inspect both the five-hour and weekly windows before starting more work. If the script fails or the remaining allowance is too low for the next step, preserve progress and stop rather than assume capacity. Review checkpoints are separate from allowance checks.

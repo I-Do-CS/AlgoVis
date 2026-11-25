@@ -159,7 +159,7 @@ export const ALGORITHMS: Record<AlgorithmId, Algorithm> = {
     id: 'radix', name: 'Radix sort', description: 'Sort integers one decimal digit at a time, starting with the units. Stable counting passes preserve the work of earlier digits.',
     tags: ['Distribution sort', 'Stable', 'Digit passes'], best: 'O(d(n + b))', average: 'O(d(n + b))', worst: 'O(d(n + b))', space: 'O(n + b)',
     code: ['for each digit, from units upward', 'count items in digit buckets 0 … 9', 'accumulate bucket counts', 'place items right to left in output', 'copy output back to the array', 'continue to the next digit'],
-    note: 'd is the number of digits and b = 10. Negative integers use a shared offset. Each pass is stable; only writes to the main array count as writes.', trace: radixTrace,
+    note: 'd is the number of digits and b = 10. Intermediate passes order digit keys, so values may look numerically unsorted until the final pass. Negative integers use a shared offset. Only writes to the main array count as writes.', trace: radixTrace,
   },
   linear: {
     id: 'linear', name: 'Linear search', description: 'Check one value at a time from left to right. Stop at the first match, or finish after every element has been checked.',
