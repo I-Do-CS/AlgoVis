@@ -1,61 +1,35 @@
 # AlgoVis
 
-**See algorithms execute, step backward through their history, and compare their behavior on the same input.**
+Step through a sort, rewind to see how it got there, or compare two algorithms on the same input. The interface and step-by-step narration are available in English and فارسی, including a right-to-left layout.
 
-`React` · `TypeScript` · `Canvas` · `Vite` · `Playwright` · `English / فارسی`
+## What to try
 
-AlgoVis is an interactive, bilingual sorting and searching visualizer for computer science education. It separates operation traces from playback and rendering, making intermediate states inspectable and reversible.
-
-## Explore algorithms
+- **Explore:** Follow an algorithm with highlighted operations, pseudocode and complexity notes.
+- **Compare:** Pick two algorithms and use one timeline to compare their operations on the same data.
+- **Search:** Pick a target and follow linear or binary search. Binary search uses a labeled, sorted copy of the input.
 
 | Family | Algorithms |
 | --- | --- |
-| Comparison sorting | Insertion, bubble, selection, merge and quicksort |
-| Distribution sorting | Counting and radix sort |
-| Searching | Linear and binary search |
-
-- **Explore:** follow one algorithm with pseudocode, narration and complexity.
-- **Compare:** run two algorithms on the same input and shared timeline.
-- **Playback:** play, pause, rewind, step, scrub and reset.
-- **Datasets:** random, sorted, reversed, nearly sorted and duplicate-heavy arrays.
-- **Localization:** English/Persian, RTL layouts, localized narration and locally hosted fonts.
+| Comparison sorts | Insertion, bubble, selection, merge, quicksort |
+| Distribution sorts | Counting, radix |
+| Searches | Linear, binary |
 
 ## Run locally
 
-Use Node.js 22.12+ and native npm.
+Use Node.js 22.12 or newer. From the repository root:
 
 ```bash
-git clone https://github.com/I-Do-CS/AlgoVis.git
-cd AlgoVis
 npm ci
 npm run dev
 ```
 
-## Architecture
+Open the local URL printed by Vite. Try merge sort and quicksort on a nearly sorted dataset, then scrub backward to revisit the comparisons and writes.
 
-```mermaid
-flowchart LR
-    Input[Dataset and target] --> Trace[Pure operation traces]
-    Trace --> Player[Checkpointed player]
-    Player --> Session[Shared session controller]
-    Clock[Browser animation clock] --> Session
-    Session --> Canvas[Canvas rendering]
-    Session --> UI[React controls and metrics]
-    Locale[Localization catalog] --> UI
-```
+## How playback works
 
-| Path | Responsibility |
-| --- | --- |
-| src/sorting/ | Sort traces, datasets, playback and session |
-| src/searching/ | Search traces |
-| src/components/ | Canvas, controls and comparison UI |
-| src/hooks/usePlaybackClock.ts | Shared animation clock |
-| src/i18n/ | Localization |
-| tests/, e2e/ | Model and browser tests |
+The algorithm modules generate [sorting](src/sorting/) and [searching](src/searching/) traces. The [player](src/sorting/player.ts) uses checkpoints to replay from nearby states when you seek. The [session controller](src/sorting/session.ts) keeps both sides of Compare on the same timeline. For comparisons, use operation counts. Elapsed time measures playback.
 
-Checkpoints allow bounded replay during seeking. Binary search operates on an explicitly labeled sorted copy. The displayed playback duration is animation time, not a CPU benchmark.
-
-## Verify and deploy
+## Checks
 
 ```bash
 npm test
@@ -64,6 +38,4 @@ npx playwright install chromium
 npm run test:e2e
 ```
 
-The static build is emitted to dist/. See [MILESTONES.md](MILESTONES.md) for implementation history. Font license notices are included in public/fonts/.
-
-Independent, AI-assisted project by [Ali Ghelichkhani](https://github.com/I-Do-CS).
+Independent project developed with AI assistance.
